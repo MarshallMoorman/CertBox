@@ -1,0 +1,10 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="CertBox.MainWindow"
+        Title="CertBox"
+        Width="800"
+        Height="600">
+    <TextBlock Text="Welcome to CertBox" 
+               HorizontalAlignment="Center" 
+               VerticalAlignment="Center"/>
+</Window>
