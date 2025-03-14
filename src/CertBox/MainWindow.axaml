@@ -1,10 +1,60 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CertBox.ViewModels"
         x:Class="CertBox.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
         Title="CertBox"
         Width="800"
-        Height="600">
-    <TextBlock Text="Welcome to CertBox" 
-               HorizontalAlignment="Center" 
-               VerticalAlignment="Center"/>
+        Height="600"
+        Background="#000000">
+    <Grid RowDefinitions="Auto,Auto,*" Margin="10">
+        <!-- Search Bar -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
+            <TextBox Watermark="Search certificates..." 
+                     Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                     Width="300"
+                     Background="#000000"
+                     Foreground="#FFFFFF"
+                     BorderBrush="#E0E0E0"
+                     BorderThickness="1"/>
+            <Button Content="Import" 
+                    Command="{Binding ImportCommand}"
+                    Background="#FFFFFF"
+                    Foreground="#000000"
+                    BorderBrush="#E0E0E0"/>
+            <Button Content="Remove" 
+                    Command="{Binding RemoveCommand}"
+                    Background="#FFFFFF"
+                    Foreground="#000000"
+                    BorderBrush="#E0E0E0"/>
+        </StackPanel>
+
+        <!-- Certificate Table -->
+        <DataGrid Grid.Row="1" 
+                  ItemsSource="{Binding Certificates}"
+                  AutoGenerateColumns="False"
+                  Background="#000000"
+                  BorderBrush="#E0E0E0"
+                  BorderThickness="1"
+                  HeadersVisibility="All">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Alias" 
+                                   Binding="{Binding Alias}" 
+                                   IsReadOnly="True"
+                                   Foreground="#FFFFFF"/>
+                <DataGridTextColumn Header="Subject" 
+                                   Binding="{Binding Subject}" 
+                                   IsReadOnly="True"
+                                   Foreground="#FFFFFF"/>
+                <DataGridTextColumn Header="Issuer" 
+                                   Binding="{Binding Issuer}" 
+                                   IsReadOnly="True"
+                                   Foreground="#FFFFFF"/>
+                <DataGridTextColumn Header="Expiry" 
+                                   Binding="{Binding ExpiryDate}" 
+                                   IsReadOnly="True"
+                                   Foreground="#FFFFFF"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
 </Window>

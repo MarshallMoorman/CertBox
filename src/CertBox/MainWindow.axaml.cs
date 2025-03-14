@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using CertBox.ViewModels;
 
 namespace CertBox
 {
@@ -6,7 +7,10 @@ namespace CertBox
     {
         public MainWindow()
         {
-            // No explicit InitializeComponent() needed; handled by Avalonia XAML compilation
+            InitializeComponent();
+            DataContext = new MainWindowViewModel();
         }
+
+        // Avalonia XAML compilation handles InitializeComponent()
     }
 }
