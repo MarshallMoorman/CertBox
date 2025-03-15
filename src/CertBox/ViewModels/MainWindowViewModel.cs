@@ -1,5 +1,3 @@
-// src/CertBox/ViewModels/MainWindowViewModel.cs
-
 using System.Collections.ObjectModel;
 using System.Security.Cryptography.X509Certificates;
 using Avalonia.Threading;
@@ -89,6 +87,7 @@ namespace CertBox.ViewModels
                 var aliases = keyStore.aliases();
                 await Dispatcher.UIThread.InvokeAsync(() => Certificates.Clear());
 
+                int count = 0;
                 while (aliases.hasMoreElements())
                 {
                     var alias = (string)aliases.nextElement();
@@ -97,16 +96,24 @@ namespace CertBox.ViewModels
                     await Task.Run(() => certBytes = cert.getEncoded()).TimeoutAfter(TimeSpan.FromSeconds(5));
                     var netCert = X509CertificateLoader.LoadCertificate(certBytes);
 
-                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    var model = new CertificateModel
                     {
-                        Certificates.Add(new CertificateModel
-                        {
-                            Alias = alias,
-                            Subject = netCert.SubjectName.Name,
-                            Issuer = netCert.IssuerName.Name,
-                            ExpiryDate = netCert.NotAfter
-                        });
-                    });
+                        Alias = alias,
+                        Subject = netCert.SubjectName.Name,
+                        Issuer = netCert.IssuerName.Name,
+                        ExpiryDate = netCert.NotAfter
+                    };
+
+#if DEBUG
+                    // Force some certificates to be expired for testing
+                    if (count < 2) // First two certificates
+                    {
+                        model.ExpiryDate = DateTime.Now.AddDays(-1); // Set to yesterday
+                    }
+#endif
+
+                    await Dispatcher.UIThread.InvokeAsync(() => Certificates.Add(model));
+                    count++;
                 }
 
                 _logger.LogInformation("Certificates loaded successfully");

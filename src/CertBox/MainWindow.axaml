@@ -1,12 +1,17 @@
+<!-- src/CertBox/MainWindow.axaml -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CertBox.ViewModels"
+        xmlns:converters="using:CertBox.Converters"
         x:Class="CertBox.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="CertBox"
         Width="800"
         Height="600"
         Background="#000000">
+    <Window.Resources>
+        <converters:ExpiredColorConverter x:Key="ExpiredColorConverter" />
+    </Window.Resources>
     <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="10">
         <!-- File Picker Button and Path -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
@@ -63,10 +68,16 @@
                                     Binding="{Binding Subject}"
                                     IsReadOnly="True"
                                     Foreground="#FFFFFF" />
-                <DataGridTextColumn Header="Expiry"
-                                    Binding="{Binding ExpiryDate}"
-                                    IsReadOnly="True"
-                                    Foreground="#FFFFFF" />
+                <DataGridTemplateColumn Header="Expiry"
+                                        IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding ExpiryDate}"
+                                       Foreground="{Binding IsExpired, Converter={StaticResource ExpiredColorConverter}}"
+                                       VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>
