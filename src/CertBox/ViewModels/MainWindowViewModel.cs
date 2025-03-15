@@ -1,13 +1,13 @@
-// src/CertBox/ViewModels/MainWindowViewModel.cs
-
 using System.Collections.ObjectModel;
 using System.Security.Cryptography.X509Certificates;
+using Avalonia.Threading;
 using CertBox.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using java.io;
 using java.security;
 using Console = System.Console;
+using File = System.IO.File;
 
 namespace CertBox.ViewModels
 {
@@ -17,49 +17,93 @@ namespace CertBox.ViewModels
 
         [ObservableProperty] private ObservableCollection<CertificateModel> _certificates = new();
 
+        [ObservableProperty] private string _selectedFilePath = string.Empty;
+
+        private const string DefaultCacertsPath =
+            "/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home/lib/security/cacerts";
+
         public MainWindowViewModel()
         {
-            // Defer loading until UI is ready
+#if DEBUG
+            // Preselect cacerts file in debug mode if it exists
+            if (File.Exists(DefaultCacertsPath))
+            {
+                SelectedFilePath = DefaultCacertsPath;
+            }
+#endif
+
+            // Defer loading until triggered
         }
 
-        // Call this after the window is shown
         public async Task InitializeAsync()
         {
-            await LoadCertificatesAsync();
+            if (!string.IsNullOrEmpty(SelectedFilePath) && File.Exists(SelectedFilePath))
+            {
+                await LoadCertificatesAsync(SelectedFilePath);
+            }
         }
 
-        private async Task LoadCertificatesAsync(
-            string cacertsPath = "/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home/lib/security/cacerts",
-            string password = "changeit")
+        [RelayCommand]
+        private async Task OpenFilePicker()
+        {
+            // Notify the view to open the file picker
+            if (OpenFilePickerRequested != null)
+            {
+                var filePath = await OpenFilePickerRequested.Invoke();
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    SelectedFilePath = filePath;
+                    await LoadCertificatesAsync(SelectedFilePath);
+                }
+            }
+        }
+
+        public event Func<Task<string>> OpenFilePickerRequested;
+
+        private async Task LoadCertificatesAsync(string cacertsPath, string password = "changeit")
         {
             try
             {
-                // Use Java's KeyStore to load JKS
-                var keyStore = KeyStore.getInstance("JKS");
+                Console.WriteLine($"Starting to load certificates from: {cacertsPath}");
+                Console.WriteLine("Before KeyStore.getInstance");
+
+                KeyStore keyStore = null;
+                await Task.Run(() => keyStore = KeyStore.getInstance("JKS")).TimeoutAfter(TimeSpan.FromSeconds(10));
+                Console.WriteLine("After KeyStore.getInstance");
+
                 using (var stream = new FileInputStream(cacertsPath))
                 {
-                    await Task.Run(() => keyStore.load(stream, password.ToCharArray()));
+                    Console.WriteLine("Before keyStore.load");
+                    await Task.Run(() => keyStore.load(stream, password.ToCharArray()))
+                        .TimeoutAfter(TimeSpan.FromSeconds(10));
+                    Console.WriteLine("After keyStore.load");
                 }
 
-                // Enumerate aliases
+                Console.WriteLine("Enumerating certificates");
                 var aliases = keyStore.aliases();
-                Certificates.Clear();
+                await Dispatcher.UIThread.InvokeAsync(() => Certificates.Clear());
 
                 while (aliases.hasMoreElements())
                 {
                     var alias = (string)aliases.nextElement();
                     var cert = (java.security.cert.X509Certificate)keyStore.getCertificate(alias);
-                    var certBytes = cert.getEncoded();
+                    byte[] certBytes = null;
+                    await Task.Run(() => certBytes = cert.getEncoded()).TimeoutAfter(TimeSpan.FromSeconds(5));
                     var netCert = X509CertificateLoader.LoadCertificate(certBytes);
 
-                    Certificates.Add(new CertificateModel
+                    await Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        Alias = alias,
-                        Subject = netCert.SubjectName.Name,
-                        Issuer = netCert.IssuerName.Name,
-                        ExpiryDate = netCert.NotAfter
+                        Certificates.Add(new CertificateModel
+                        {
+                            Alias = alias,
+                            Subject = netCert.SubjectName.Name,
+                            Issuer = netCert.IssuerName.Name,
+                            ExpiryDate = netCert.NotAfter
+                        });
                     });
                 }
+
+                Console.WriteLine("Certificates loaded successfully");
             }
             catch (Exception ex)
             {

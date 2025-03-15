@@ -7,30 +7,43 @@
         Width="800"
         Height="600"
         Background="#000000">
-    <Grid RowDefinitions="Auto,Auto,*" Margin="10">
-        <!-- Search Bar -->
+    <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="10">
+        <!-- File Picker Button and Path -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
-            <TextBox Watermark="Search certificates..." 
+            <Button Content="Open cacerts File"
+                    Command="{Binding OpenFilePickerCommand}"
+                    Background="#FFFFFF"
+                    Foreground="#000000"
+                    BorderBrush="#E0E0E0" />
+            <TextBlock Text="{Binding SelectedFilePath, StringFormat='Selected File: {0}'}"
+                       Foreground="#FFFFFF"
+                       VerticalAlignment="Center"
+                       Margin="10,0,0,0" />
+        </StackPanel>
+
+        <!-- Search Bar -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
+            <TextBox Watermark="Search certificates..."
                      Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                      Width="300"
                      Background="#000000"
                      Foreground="#FFFFFF"
                      BorderBrush="#E0E0E0"
-                     BorderThickness="1"/>
-            <Button Content="Import" 
+                     BorderThickness="1" />
+            <Button Content="Import"
                     Command="{Binding ImportCommand}"
                     Background="#FFFFFF"
                     Foreground="#000000"
-                    BorderBrush="#E0E0E0"/>
-            <Button Content="Remove" 
+                    BorderBrush="#E0E0E0" />
+            <Button Content="Remove"
                     Command="{Binding RemoveCommand}"
                     Background="#FFFFFF"
                     Foreground="#000000"
-                    BorderBrush="#E0E0E0"/>
+                    BorderBrush="#E0E0E0" />
         </StackPanel>
 
         <!-- Certificate Table -->
-        <DataGrid Grid.Row="1" 
+        <DataGrid Grid.Row="2"
                   ItemsSource="{Binding Certificates}"
                   AutoGenerateColumns="False"
                   Background="#000000"
@@ -38,22 +51,22 @@
                   BorderThickness="1"
                   HeadersVisibility="All">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Alias" 
-                                   Binding="{Binding Alias}" 
-                                   IsReadOnly="True"
-                                   Foreground="#FFFFFF"/>
-                <DataGridTextColumn Header="Subject" 
-                                   Binding="{Binding Subject}" 
-                                   IsReadOnly="True"
-                                   Foreground="#FFFFFF"/>
-                <DataGridTextColumn Header="Issuer" 
-                                   Binding="{Binding Issuer}" 
-                                   IsReadOnly="True"
-                                   Foreground="#FFFFFF"/>
-                <DataGridTextColumn Header="Expiry" 
-                                   Binding="{Binding ExpiryDate}" 
-                                   IsReadOnly="True"
-                                   Foreground="#FFFFFF"/>
+                <DataGridTextColumn Header="Alias"
+                                    Binding="{Binding Alias}"
+                                    IsReadOnly="True"
+                                    Foreground="#FFFFFF" />
+                <DataGridTextColumn Header="Issuer"
+                                    Binding="{Binding Issuer}"
+                                    IsReadOnly="True"
+                                    Foreground="#FFFFFF" />
+                <DataGridTextColumn Header="Subject"
+                                    Binding="{Binding Subject}"
+                                    IsReadOnly="True"
+                                    Foreground="#FFFFFF" />
+                <DataGridTextColumn Header="Expiry"
+                                    Binding="{Binding ExpiryDate}"
+                                    IsReadOnly="True"
+                                    Foreground="#FFFFFF" />
             </DataGrid.Columns>
         </DataGrid>
     </Grid>
