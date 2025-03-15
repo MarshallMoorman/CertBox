@@ -5,7 +5,7 @@ namespace CertBox.Models
         public string Alias { get; set; } = string.Empty;
         public string Subject { get; set; } = string.Empty;
         public string Issuer { get; set; } = string.Empty;
-        public string ExpiryDate { get; set; } = string.Empty;
-        public bool IsExpired { get; set; }
+        public DateTime ExpiryDate { get; set; }
+        public bool IsExpired => ExpiryDate < DateTime.Now;
     }
 }

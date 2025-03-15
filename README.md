@@ -4,6 +4,7 @@ CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage cer
 
 ## Features
 - View all certificate fields (read-only) in a `cacerts` file.
+- Select a `cacerts` file at runtime using a file picker.
 - Import certificates in common formats (`.pem`, `.crt`, `.cer`, `.der`).
 - Remove or replace existing certificates.
 - Reject expired certificates on import; highlight invalid/expired certificates in red.
@@ -16,6 +17,9 @@ CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage cer
 4. Run the app: `dotnet run`
 
 **Note**: This project is primarily developed on a MacBook Pro M3 Max (Apple Silicon). Ensure the .NET 9 SDK is installed with ARM64 support for development on similar hardware. The app uses a dark theme with colors inspired by the project icon: `#000000` (black) background, `#FFFFFF` (white) text/accents, and `#E0E0E0` (light gray) for secondary elements. The project relies on Avalonia 11.2.5 and CommunityToolkit.Mvvm 8.4.0.
+
+## Dependencies
+- **IKVM and IKVM.Image.JDK**: Used to load JKS `cacerts` files via Java’s `java.security.KeyStore`. `IKVM.Image.JDK` embeds a JDK runtime, ensuring users don’t need to install a JDK separately.
 
 ## Building
 - Requires .NET 9 SDK.

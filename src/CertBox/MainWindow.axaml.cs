@@ -1,3 +1,5 @@
+// src/CertBox/MainWindow.axaml.cs
+
 using Avalonia.Controls;
 using CertBox.ViewModels;
 
@@ -8,9 +10,10 @@ namespace CertBox
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = new MainWindowViewModel();
+            var viewModel = new MainWindowViewModel();
+            DataContext = viewModel;
+            // Call async initialization after window is shown
+            Loaded += async (s, e) => await viewModel.InitializeAsync();
         }
-
-        // Avalonia XAML compilation handles InitializeComponent()
     }
 }

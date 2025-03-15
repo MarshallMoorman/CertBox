@@ -8,4 +8,9 @@ The app is delivered as single-file executables with self-contained .NET 9 runti
 
 When providing code, always supply full files for easy copy-pasting. Use the current project setup (e.g., `CertBox.csproj` with Avalonia 11.2.5 and .NET 9) as the baseline. Focus on one task at a time (e.g., UI, certificate logic, CI/CD) based on the user’s request, and suggest next steps after each response.
 
+**Key Development Decisions**:
+- **JKS Keystore Loading**: Initial attempts to load JKS `cacerts` files using `BouncyCastle.NetCore` and `Portable.BouncyCastle` failed due to lack of native JKS support in .NET. After exploring `Pkcs12Store` and `JavaKeyStore`, which resulted in errors (e.g., "long form definite-length more than 31 bits"), we switched to `IKVM` (8.11.2) and `IKVM.Image.JDK` (8.11.2) for Java interop. `IKVM` allows direct use of Java’s `java.security.KeyStore` to load JKS files natively, bypassing BouncyCastle’s limitations. `IKVM.Image.JDK` embeds a JDK runtime, eliminating the need for users to install a JDK separately, which aligns with the single-file executable goal.
+- **Threading Fix**: Early versions of `MainWindowViewModel` blocked the main thread by calling `LoadCertificatesAsync().GetAwaiter().GetResult()` in the constructor, preventing Avalonia’s UI initialization. This was fixed by moving certificate loading to an async `InitializeAsync` method, called after the `MainWindow`’s `Loaded` event, ensuring the UI renders before performing long-running operations.
+- **File Picker**: Added a file picker using Avalonia’s `OpenFileDialog` to allow users to select a `cacerts` file at runtime, replacing the hardcoded path. The selected file path is displayed in the UI, and certificates are loaded dynamically from the chosen file.
+
 Current date: March 14, 2025. Knowledge is continuously updated.
