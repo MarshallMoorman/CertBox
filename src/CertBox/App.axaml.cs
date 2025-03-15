@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CertBox
 {
@@ -14,12 +15,11 @@ namespace CertBox
 
         public override void OnFrameworkInitializationCompleted()
         {
-            // Set the theme variant to Dark to match the icon
             RequestedThemeVariant = ThemeVariant.Dark;
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                desktop.MainWindow = new MainWindow();
+                desktop.MainWindow = Program.ServiceProvider.GetRequiredService<MainWindow>();
             }
 
             base.OnFrameworkInitializationCompleted();

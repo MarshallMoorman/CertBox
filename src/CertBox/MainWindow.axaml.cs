@@ -5,10 +5,9 @@ namespace CertBox
 {
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        public MainWindow(MainWindowViewModel viewModel)
         {
             InitializeComponent();
-            var viewModel = new MainWindowViewModel();
             DataContext = viewModel;
             viewModel.OpenFilePickerRequested += async () =>
             {
