@@ -20,3 +20,11 @@ When providing code, always supply full files for easy copy-pasting. Use the cur
 - **Path Consistency**: Ensured all paths (`test_cacerts`, `sample_certs`, logs) are resolved relative to `AppDomain.CurrentDomain.BaseDirectory`, fixing issues with working directory dependency. Adjusted paths in `TestGenerator`, `MainWindowViewModel`, and `MainWindow.axaml.cs` to navigate correctly from `bin/Debug/net9.0` to the repo root.
 
 Current date: March 14, 2025. Knowledge is continuously updated.
+
+The current code is pushed to my GitHub account.  Review it so that you have context of all the code in the project.  Do NOT make assumptions about what code is in the project.
+
+https://github.com/MarshallMoorman/CertBox
+
+Also, here is the current file structure.
+
+[INSERT FILE STRUCTURE HERE]

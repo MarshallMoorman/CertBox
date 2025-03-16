@@ -1,30 +1,32 @@
 // src/CertBox/MainWindow.axaml.cs
 
 using Avalonia.Controls;
+using CertBox.Common;
 using CertBox.ViewModels;
 
 namespace CertBox
 {
     public partial class MainWindow : Window
     {
-        public MainWindow(MainWindowViewModel viewModel)
+        private readonly IApplicationContext _applicationContext;
+
+        public MainWindow(MainWindowViewModel viewModel, IApplicationContext applicationContext)
         {
+            _applicationContext = applicationContext;
             InitializeComponent();
             DataContext = viewModel;
             viewModel.OpenFilePickerRequested += async () =>
             {
                 return await ShowFilePickerAsync("Select Java Keystore File",
                     new FileDialogFilter { Name = "All Files", Extensions = { "*" } },
-                    Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-                        "../../../../../../tests/resources/test_cacerts")));
+                    _applicationContext.DefaultCacertsPath);
             };
             viewModel.ImportCertificateRequested += async () =>
             {
                 return await ShowFilePickerAsync("Select Certificate File",
                     new FileDialogFilter
                         { Name = "Certificate Files", Extensions = { "pem", "crt", "cer", "der" } },
-                    Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-                        "../../../../../../tests/resources/sample_certs")));
+                    _applicationContext.DefaultSampleCertsPath);
             };
             Loaded += async (s, e) => await viewModel.InitializeAsync();
         }

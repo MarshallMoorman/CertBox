@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Security.Cryptography.X509Certificates;
 using Avalonia.Threading;
+using CertBox.Common;
 using CertBox.Models;
 using CertBox.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,26 +14,29 @@ namespace CertBox.ViewModels
     {
         private readonly ILogger<MainWindowViewModel> _logger;
         private readonly CertificateService _certificateService;
+        private readonly IApplicationContext _applicationContext;
 
-        [ObservableProperty] 
+        [ObservableProperty]
         private string _searchQuery = string.Empty;
 
-        [ObservableProperty] 
+        [ObservableProperty]
         private ObservableCollection<CertificateModel> _certificates = new();
 
-        [ObservableProperty] 
+        [ObservableProperty]
         private string _selectedFilePath = string.Empty;
 
-        [NotifyCanExecuteChangedFor(nameof(RemoveCommand))] 
+        [NotifyCanExecuteChangedFor(nameof(RemoveCommand))]
         [ObservableProperty]
         private CertificateModel _selectedCertificate;
 
         private string DefaultCacertsPath;
 
-        public MainWindowViewModel(ILogger<MainWindowViewModel> logger, CertificateService certificateService)
+        public MainWindowViewModel(ILogger<MainWindowViewModel> logger, CertificateService certificateService,
+            IApplicationContext applicationContext)
         {
             _logger = logger;
             _certificateService = certificateService;
+            _applicationContext = applicationContext;
 
             SetDefaultCacertsFile();
 
@@ -49,8 +53,7 @@ namespace CertBox.ViewModels
         {
 #if DEBUG
             // Compute the path relative to the executable directory with correct navigation
-            DefaultCacertsPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-                "../../../../../../tests/resources/test_cacerts"));
+            DefaultCacertsPath = _applicationContext.DefaultCacertsPath;
 #else
             // TODO: Find the default cacerts file based on the user's JAVA_HOME variable or PATH if JAVA_HOME doesn't exist.
 #endif
@@ -81,7 +84,7 @@ namespace CertBox.ViewModels
 
         public event Func<Task<string>> OpenFilePickerRequested;
 
-        private async Task LoadCertificatesAsync(string cacertsPath, string password = "changeit")
+        private async Task LoadCertificatesAsync(string cacertsPath, string password = Constants.DefaultKeystorePassword)
         {
             try
             {

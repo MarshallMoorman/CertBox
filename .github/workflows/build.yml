@@ -9,6 +9,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read  # Default for build jobs
+
 jobs:
   build:
     strategy:
@@ -34,7 +37,7 @@ jobs:
       - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '9.0.100'
 
       - name: Log disk usage (initial)
         run: df -h || dir
@@ -147,16 +150,7 @@ jobs:
         run: df -h || dir
 
       - name: Publish CertBox (with trimming disabled)
-        run: |
-          dotnet publish src/CertBox/CertBox.csproj \
-            --configuration Release \
-            --runtime ${{ matrix.runtime }} \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:IncludeNativeLibrariesForSelfExtract=true \
-            -p:PublishTrimmed=false \
-            -p:DebugType=None \
-            -o ./publish/${{ matrix.runtime }}
+        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=None -o ./publish/${{ matrix.runtime }}
 
       - name: Log disk usage (after publish)
         run: df -h || dir
@@ -168,26 +162,25 @@ jobs:
           mkdir -p ./publish/CertBox.app/Contents/Resources
           cp ./publish/osx-arm64/CertBox ./publish/CertBox.app/Contents/MacOS/
           cp src/CertBox/Assets/certbox.ico ./publish/CertBox.app/Contents/Resources/CertBox.icns
-          cat <<EOF > ./publish/CertBox.app/Contents/Info.plist
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CFBundleName</key>
-            <string>CertBox</string>
-            <key>CFBundleIdentifier</key>
-            <string>com.marshallmoorman.certbox</string>
-            <key>CFBundleVersion</key>
-            <string>1.0.0</string>
-            <key>CFBundleExecutable</key>
-            <string>CertBox</string>
-            <key>CFBundleIconFile</key>
-            <string>CertBox.icns</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-          </dict>
-          </plist>
-          EOF
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > ./publish/CertBox.app/Contents/Info.plist
+          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '<plist version="1.0">' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '<dict>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <key>CFBundleName</key>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <string>CertBox</string>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <key>CFBundleIdentifier</key>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <string>com.marshallmoorman.certbox</string>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <key>CFBundleVersion</key>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <string>1.0.0</string>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <key>CFBundleExecutable</key>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <key>CFBundleExecutable</key>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <string>CertBox</string>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <key>CFBundleIconFile</key>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <string>CertBox.icns</string>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <key>CFBundlePackageType</key>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '  <string>APPL</string>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '</dict>' >> ./publish/CertBox.app/Contents/Info.plist
+          echo '</plist>' >> ./publish/CertBox.app/Contents/Info.plist
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -202,6 +195,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Debug RELEASE_TOKEN
+        run: echo "RELEASE_TOKEN secret is set: ${{ secrets.RELEASE_TOKEN != '' }}"
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -219,4 +218,4 @@ jobs:
             artifacts/CertBox-linux-x64/CertBox
             artifacts/CertBox-macos-arm64/CertBox
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}

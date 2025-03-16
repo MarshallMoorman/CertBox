@@ -1,13 +1,12 @@
 // src/CertBox.TestGenerator/Program.cs
 
-using System;
-using System.IO;
 using CertBox.Common;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Core;
+using Constants = CertBox.Common.Constants;
 
 namespace CertBox.TestGenerator
 {
@@ -22,9 +21,9 @@ namespace CertBox.TestGenerator
             ConfigureServices();
             var generator = _serviceProvider.GetRequiredService<CertificateGenerator>();
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var outputPath = Path.GetFullPath(Path.Combine(baseDir, "../../../../../tests/resources/test_cacerts"));
-            var sampleDir = Path.GetFullPath(Path.Combine(baseDir, "../../../../../tests/resources/sample_certs"));
-            var password = "changeit";
+            var outputPath = _applicationContext.DefaultCacertsPath;
+            var sampleDir = _applicationContext.DefaultSampleCertsPath;
+            var password = Constants.DefaultKeystorePassword;
 
             try
             {
