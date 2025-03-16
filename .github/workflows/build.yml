@@ -1,0 +1,222 @@
+name: Build and Release CertBox
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            runtime: win-x64
+            artifact-suffix: win-x64
+          - os: ubuntu-latest
+            runtime: linux-x64
+            artifact-suffix: linux-x64
+          - os: macos-latest
+            runtime: osx-arm64
+            artifact-suffix: macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Log disk usage (initial)
+        run: df -h || dir
+
+      - name: Clear NuGet cache (initial)
+        run: dotnet nuget locals all --clear
+
+      - name: Log disk usage (after initial cleanup)
+        run: df -h || dir
+
+      - name: Restore dependencies
+        run: dotnet restore CertBox.sln
+
+      - name: Build solution
+        run: dotnet build CertBox.sln --configuration Release --no-restore
+
+      - name: Log disk usage (after build)
+        run: df -h || dir
+
+      - name: Clear NuGet cache with retry (post-build)
+        run: |
+          for attempt in {1..3}; do
+            echo "Attempt $attempt to clear NuGet cache..."
+            dotnet nuget locals all --clear && break
+            if [ $attempt -lt 3 ]; then
+              echo "Failed to clear NuGet cache, retrying in 5 seconds..."
+              sleep 5
+            else
+              echo "Failed to clear NuGet cache after 3 attempts, proceeding anyway."
+            fi
+          done
+        continue-on-error: true
+
+      - name: Clean obj directories (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: find . -type d -name "obj" -exec rm -rf {} + || true
+
+      - name: Clean obj directories (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          Get-ChildItem -Path . -Recurse -Directory -Filter 'obj' -ErrorAction SilentlyContinue | ForEach-Object { 
+            try { 
+              Write-Host 'Deleting directory: ' $_.FullName
+              Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction Stop 
+            } catch { 
+              Write-Host 'Failed to delete directory ' $_.FullName ': ' $_.Exception.Message 
+            }
+          }
+
+      - name: Log disk usage (after cleanup)
+        run: df -h || dir
+
+      - name: Run tests
+        run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
+
+      - name: Log disk usage (after tests)
+        run: df -h || dir
+
+      - name: Clean up unnecessary IKVM runtimes (CertBox only, Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          echo "Checking IKVM runtimes in CertBox..."
+          find ./src/CertBox/bin -type d -path "*/Release/net9.0/ikvm/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
+          find ./src/CertBox/bin -type d -path "*/Release/net9.0/ikvm/*" -not -path "*/Release/net9.0/ikvm/runtimes/${{ matrix.runtime }}" -not -path "*/Release/net9.0/ikvm" -exec rm -rf {} + || true
+
+      - name: Clean up unnecessary IKVM runtimes (CertBox only, Windows)
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          Get-ChildItem -Path './src/CertBox/bin' -Recurse -Directory -Filter 'ikvm' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notlike '*Release/net9.0/ikvm/runtimes/${{ matrix.runtime }}*' -and $_.FullName -notlike '*Release/net9.0/ikvm' } | ForEach-Object { 
+            try { 
+              Write-Host 'Deleting directory: ' $_.FullName
+              Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction Stop 
+            } catch { 
+              Write-Host 'Failed to delete directory ' $_.FullName ': ' $_.Exception.Message 
+            }
+          }
+
+      - name: Clean up runtimes folders (all projects, Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          echo "Checking runtimes in CertBox.TestGenerator..."
+          find ./src/CertBox.TestGenerator/bin -type d -path "*Release/net9.0/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
+          echo "Checking runtimes in CertBox.Tests..."
+          find ./tests/CertBox.Tests/bin -type d -path "*Release/net9.0/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
+
+      - name: Clean up runtimes folders (all projects, Windows)
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          Get-ChildItem -Path './src/CertBox.TestGenerator/bin' -Recurse -Directory -Filter 'runtimes' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notlike '*Release/net9.0/runtimes/${{ matrix.runtime }}*' } | ForEach-Object { 
+            try { 
+              Write-Host 'Deleting directory: ' $_.FullName
+              Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction Stop 
+            } catch { 
+              Write-Host 'Failed to delete directory ' $_.FullName ': ' $_.Exception.Message 
+            }
+          }
+          Get-ChildItem -Path './tests/CertBox.Tests/bin' -Recurse -Directory -Filter 'runtimes' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notlike '*Release/net9.0/runtimes/${{ matrix.runtime }}*' } | ForEach-Object { 
+            try { 
+              Write-Host 'Deleting directory: ' $_.FullName
+              Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction Stop 
+            } catch { 
+              Write-Host 'Failed to delete directory ' $_.FullName ': ' $_.Exception.Message 
+            }
+          }
+
+      - name: Log disk usage (after cleanup)
+        run: df -h || dir
+
+      - name: Publish CertBox (with trimming disabled)
+        run: |
+          dotnet publish src/CertBox/CertBox.csproj \
+            --configuration Release \
+            --runtime ${{ matrix.runtime }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:PublishTrimmed=false \
+            -p:DebugType=None \
+            -o ./publish/${{ matrix.runtime }}
+
+      - name: Log disk usage (after publish)
+        run: df -h || dir
+
+      - name: Create macOS .app bundle (macOS only)
+        if: matrix.os == 'macos-latest'
+        run: |
+          mkdir -p ./publish/CertBox.app/Contents/MacOS
+          mkdir -p ./publish/CertBox.app/Contents/Resources
+          cp ./publish/osx-arm64/CertBox ./publish/CertBox.app/Contents/MacOS/
+          cp src/CertBox/Assets/certbox.ico ./publish/CertBox.app/Contents/Resources/CertBox.icns
+          cat <<EOF > ./publish/CertBox.app/Contents/Info.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key>
+            <string>CertBox</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.marshallmoorman.certbox</string>
+            <key>CFBundleVersion</key>
+            <string>1.0.0</string>
+            <key>CFBundleExecutable</key>
+            <string>CertBox</string>
+            <key>CFBundleIconFile</key>
+            <string>CertBox.icns</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CertBox-${{ matrix.artifact-suffix }}
+          path: ./publish/${{ matrix.runtime }}/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: CertBox Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/CertBox-win-x64/CertBox.exe
+            artifacts/CertBox-linux-x64/CertBox
+            artifacts/CertBox-macos-arm64/CertBox
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

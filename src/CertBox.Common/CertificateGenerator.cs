@@ -1,5 +1,7 @@
 // src/CertBox.Common/CertificateGenerator.cs
 
+using System;
+using System.IO;
 using java.io;
 using java.security;
 using java.security.cert;

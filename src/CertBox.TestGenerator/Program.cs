@@ -1,5 +1,7 @@
 // src/CertBox.TestGenerator/Program.cs
 
+using System;
+using System.IO;
 using CertBox.Common;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
