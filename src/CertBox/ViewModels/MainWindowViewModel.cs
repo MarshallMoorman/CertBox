@@ -2,41 +2,58 @@ using System.Collections.ObjectModel;
 using System.Security.Cryptography.X509Certificates;
 using Avalonia.Threading;
 using CertBox.Models;
+using CertBox.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using java.io;
-using java.security;
 using Microsoft.Extensions.Logging;
-using File = System.IO.File;
 
 namespace CertBox.ViewModels
 {
     public partial class MainWindowViewModel : ObservableObject
     {
         private readonly ILogger<MainWindowViewModel> _logger;
+        private readonly CertificateService _certificateService;
 
-        [ObservableProperty] private string _searchQuery = string.Empty;
+        [ObservableProperty] 
+        private string _searchQuery = string.Empty;
 
-        [ObservableProperty] private ObservableCollection<CertificateModel> _certificates = new();
+        [ObservableProperty] 
+        private ObservableCollection<CertificateModel> _certificates = new();
 
-        [ObservableProperty] private string _selectedFilePath = string.Empty;
+        [ObservableProperty] 
+        private string _selectedFilePath = string.Empty;
 
-        private const string DefaultCacertsPath =
-            "/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home/lib/security/cacerts";
+        [NotifyCanExecuteChangedFor(nameof(RemoveCommand))] 
+        [ObservableProperty]
+        private CertificateModel _selectedCertificate;
 
-        public MainWindowViewModel(ILogger<MainWindowViewModel> logger)
+        private string DefaultCacertsPath;
+
+        public MainWindowViewModel(ILogger<MainWindowViewModel> logger, CertificateService certificateService)
         {
             _logger = logger;
+            _certificateService = certificateService;
 
-#if DEBUG
-            // Preselect cacerts file in debug mode if it exists
+            SetDefaultCacertsFile();
+
+            // Preselect test cacerts file in debug mode if it exists
             if (File.Exists(DefaultCacertsPath))
             {
                 SelectedFilePath = DefaultCacertsPath;
             }
-#endif
 
             // Defer loading until triggered
+        }
+
+        private void SetDefaultCacertsFile()
+        {
+#if DEBUG
+            // Compute the path relative to the executable directory with correct navigation
+            DefaultCacertsPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+                "../../../../../../tests/resources/test_cacerts"));
+#else
+            // TODO: Find the default cacerts file based on the user's JAVA_HOME variable or PATH if JAVA_HOME doesn't exist.
+#endif
         }
 
         public async Task InitializeAsync()
@@ -69,53 +86,16 @@ namespace CertBox.ViewModels
             try
             {
                 _logger.LogDebug("Starting to load certificates from: {CacertsPath}", cacertsPath);
-                _logger.LogDebug("Before KeyStore.getInstance");
-
-                KeyStore keyStore = null;
-                await Task.Run(() => keyStore = KeyStore.getInstance("JKS")).TimeoutAfter(TimeSpan.FromSeconds(10));
-                _logger.LogDebug("After KeyStore.getInstance");
-
-                using (var stream = new FileInputStream(cacertsPath))
+                _certificateService.LoadKeystore(cacertsPath, password);
+                var certificates = _certificateService.GetCertificates();
+                await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    _logger.LogDebug("Before keyStore.load");
-                    await Task.Run(() => keyStore.load(stream, password.ToCharArray()))
-                        .TimeoutAfter(TimeSpan.FromSeconds(10));
-                    _logger.LogDebug("After keyStore.load");
-                }
-
-                _logger.LogDebug("Enumerating certificates");
-                var aliases = keyStore.aliases();
-                await Dispatcher.UIThread.InvokeAsync(() => Certificates.Clear());
-
-                int count = 0;
-                while (aliases.hasMoreElements())
-                {
-                    var alias = (string)aliases.nextElement();
-                    var cert = (java.security.cert.X509Certificate)keyStore.getCertificate(alias);
-                    byte[] certBytes = null;
-                    await Task.Run(() => certBytes = cert.getEncoded()).TimeoutAfter(TimeSpan.FromSeconds(5));
-                    var netCert = X509CertificateLoader.LoadCertificate(certBytes);
-
-                    var model = new CertificateModel
+                    Certificates.Clear();
+                    foreach (var cert in certificates)
                     {
-                        Alias = alias,
-                        Subject = netCert.SubjectName.Name,
-                        Issuer = netCert.IssuerName.Name,
-                        ExpiryDate = netCert.NotAfter
-                    };
-
-#if DEBUG
-                    // Force some certificates to be expired for testing
-                    if (count < 2) // First two certificates
-                    {
-                        model.ExpiryDate = DateTime.Now.AddDays(-1); // Set to yesterday
+                        Certificates.Add(cert);
                     }
-#endif
-
-                    await Dispatcher.UIThread.InvokeAsync(() => Certificates.Add(model));
-                    count++;
-                }
-
+                });
                 _logger.LogInformation("Certificates loaded successfully");
             }
             catch (Exception ex)
@@ -124,16 +104,74 @@ namespace CertBox.ViewModels
             }
         }
 
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanImport))]
         private async Task Import()
         {
-            await Task.CompletedTask;
+            if (string.IsNullOrEmpty(SelectedFilePath) || !File.Exists(SelectedFilePath))
+            {
+                _logger.LogWarning("No keystore loaded for import");
+                return;
+            }
+
+            // TODO: Check for to see if the certificate already exists before importing.
+            // TODO: Show confirmation message prior to importing if certificate is expired.
+
+            try
+            {
+                // Notify the view to open the file picker for importing a certificate
+                if (ImportCertificateRequested != null)
+                {
+                    var certPath = await ImportCertificateRequested.Invoke();
+                    if (!string.IsNullOrEmpty(certPath))
+                    {
+                        var cert = new X509Certificate2(certPath);
+                        var alias = Path.GetFileNameWithoutExtension(certPath);
+                        _certificateService.ImportCertificate(alias, cert);
+                        await LoadCertificatesAsync(SelectedFilePath); // Refresh the list
+                        _logger.LogInformation("Imported certificate with alias: {Alias}", alias);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error importing certificate");
+            }
         }
 
-        [RelayCommand]
-        private void Remove()
+        private bool CanImport()
         {
+            return !string.IsNullOrEmpty(SelectedFilePath);
         }
+
+        [RelayCommand(CanExecute = nameof(CanRemove))]
+        private async Task Remove()
+        {
+            if (_selectedCertificate == null)
+            {
+                _logger.LogWarning("No certificate selected for removal");
+                return;
+            }
+
+            try
+            {
+                var alias = _selectedCertificate.Alias;
+                _certificateService.RemoveCertificate(alias);
+                await LoadCertificatesAsync(SelectedFilePath); // Refresh the list
+                _logger.LogInformation("Removed certificate with alias: {Alias}", alias);
+                SelectedCertificate = null; // Clear selection
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing certificate");
+            }
+        }
+
+        private bool CanRemove()
+        {
+            return _selectedCertificate != null;
+        }
+
+        public event Func<Task<string>> ImportCertificateRequested;
 
         partial void OnSearchQueryChanged(string value)
         {

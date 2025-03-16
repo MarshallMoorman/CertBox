@@ -39,17 +39,21 @@
                     Command="{Binding ImportCommand}"
                     Background="#FFFFFF"
                     Foreground="#000000"
-                    BorderBrush="#E0E0E0" />
+                    BorderBrush="#E0E0E0"
+                    IsEnabled="{Binding CanImport}" />
             <Button Content="Remove"
                     Command="{Binding RemoveCommand}"
                     Background="#FFFFFF"
                     Foreground="#000000"
-                    BorderBrush="#E0E0E0" />
+                    BorderBrush="#E0E0E0"
+                    IsEnabled="{Binding CanRemove}" />
         </StackPanel>
 
         <!-- Certificate Table -->
         <DataGrid Grid.Row="2"
                   ItemsSource="{Binding Certificates}"
+                  SelectedItem="{Binding SelectedCertificate, Mode=TwoWay}"
+                  SelectionMode="Single"
                   AutoGenerateColumns="False"
                   Background="#000000"
                   BorderBrush="#E0E0E0"

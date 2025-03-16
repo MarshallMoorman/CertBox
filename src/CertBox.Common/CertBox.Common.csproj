@@ -1,0 +1,14 @@
+<!-- src/CertBox.Common/CertBox.Common.csproj -->
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="IKVM" Version="8.11.2"/>
+        <PackageReference Include="IKVM.Image.JDK" Version="8.11.2"/>
+        <PackageReference Include="BouncyCastle.NetCore" Version="2.2.1"/>
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.3"/>
+    </ItemGroup>
+</Project>

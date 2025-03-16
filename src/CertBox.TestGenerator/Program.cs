@@ -1,35 +1,58 @@
-// src/CertBox/Program.cs
+// src/CertBox.TestGenerator/Program.cs
 
-using Avalonia;
 using CertBox.Common;
-using CertBox.Services;
-using CertBox.ViewModels;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Core;
 
-namespace CertBox
+namespace CertBox.TestGenerator
 {
-    class Program
+    internal class Program
     {
-        private static IServiceProvider? _serviceProvider;
         private static ApplicationContext _applicationContext;
+        private static IServiceProvider? _serviceProvider;
 
-        [STAThread]
-        public static void Main(string[] args)
+        static void Main(string[] args)
         {
-            _applicationContext = new ApplicationContext(AppDomain.CurrentDomain.BaseDirectory, 6);
+            _applicationContext = new ApplicationContext(AppDomain.CurrentDomain.BaseDirectory, 5);
             ConfigureServices();
-            BuildAvaloniaApp()
-                .StartWithClassicDesktopLifetime(args);
-        }
+            var generator = _serviceProvider.GetRequiredService<CertificateGenerator>();
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var outputPath = Path.GetFullPath(Path.Combine(baseDir, "../../../../../tests/resources/test_cacerts"));
+            var sampleDir = Path.GetFullPath(Path.Combine(baseDir, "../../../../../tests/resources/sample_certs"));
+            var password = "changeit";
 
-        public static AppBuilder BuildAvaloniaApp()
-            => AppBuilder.Configure<App>()
-                .UsePlatformDetect()
-                .LogToTrace();
+            try
+            {
+                // Ensure the output directory exists
+                var outputDir = Path.GetDirectoryName(outputPath);
+                if (!Directory.Exists(outputDir))
+                {
+                    Directory.CreateDirectory(outputDir);
+                }
+
+                if (File.Exists(outputPath))
+                {
+                    File.Delete(outputPath);
+                }
+
+                generator.GenerateTestKeystore(outputPath, password);
+                _serviceProvider.GetRequiredService<ILogger<Program>>()
+                    .LogInformation("Test cacerts file generated at: {OutputPath}", outputPath);
+
+                // Generate sample certificates
+                generator.GenerateSampleCertificates(sampleDir);
+                _serviceProvider.GetRequiredService<ILogger<Program>>()
+                    .LogInformation("Sample certificates generated in: {SampleDir}", sampleDir);
+            }
+            catch (Exception ex)
+            {
+                _serviceProvider.GetRequiredService<ILogger<Program>>().LogError(ex,
+                    "Error generating test cacerts file or sample certificates");
+            }
+        }
 
         private static void ConfigureServices()
         {
@@ -67,23 +90,13 @@ namespace CertBox
                 .CreateLogger();
 
             services.AddLogging(logging => logging.AddSerilog(Log.Logger, dispose: true));
-
-            // Register services
-            services.AddSingleton<IConfiguration>(configuration);
+            services.AddTransient<CertificateGenerator>();
             services.AddSingleton<IApplicationContext>(_applicationContext);
-            services.AddTransient<MainWindowViewModel>();
-            services.AddTransient<MainWindow>();
-            services.AddTransient<CertificateService>();
+            services.AddTransient<ILogger<CertificateGenerator>>(provider =>
+                provider.GetRequiredService<ILoggerFactory>().CreateLogger<CertificateGenerator>());
 
             _serviceProvider = services.BuildServiceProvider();
-
-            var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
-            logger.LogDebug("Application starting...");
         }
-
-        public static IServiceProvider ServiceProvider => _serviceProvider
-                                                          ?? throw new InvalidOperationException(
-                                                              "Service provider not initialized.");
 
         private static IConfigurationSection FindLogPathSection(IConfigurationRoot configuration)
         {
