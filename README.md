@@ -9,6 +9,8 @@ CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage cer
 - Remove or replace existing certificates with selection in a `DataGrid`.
 - Reject expired certificates on import; highlight invalid/expired certificates in red (fixed vertical alignment issue in the `Expiry` column).
 - Cross-platform support: Windows, Linux, macOS (single-file executables + macOS `.app` bundle).
+- View all certificate fields (read-only) in a `cacerts` file with a searchable and filterable table-based UI using custom icons and the Inter font.
+- Added a fade-in animation for the details pane when a certificate is selected.
 
 ## Getting Started
 1. Clone the repository: `git clone https://github.com/<your-username>/CertBox.git`

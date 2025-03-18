@@ -1,6 +1,7 @@
 // src/CertBox/MainWindow.axaml.cs
 
 using Avalonia.Controls;
+using Avalonia.Input;
 using CertBox.Common;
 using CertBox.ViewModels;
 
@@ -44,6 +45,14 @@ namespace CertBox
 
             var result = await dialog.ShowAsync(this);
             return result != null && result.Length > 0 ? result[0] : null;
+        }
+
+        private void Background_Click(object sender, PointerPressedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel viewModel)
+            {
+                viewModel.SelectedCertificate = null;
+            }
         }
     }
 }

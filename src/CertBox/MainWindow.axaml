@@ -1,88 +1,136 @@
-<!-- src/CertBox/MainWindow.axaml -->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CertBox.ViewModels"
-        xmlns:converters="using:CertBox.Converters"
+        xmlns:converters="clr-namespace:CertBox.Converters"
         x:Class="CertBox.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="CertBox"
-        Width="800"
-        Height="600"
-        Background="#000000">
-    <Window.Resources>
-        <converters:ExpiredColorConverter x:Key="ExpiredColorConverter" />
-    </Window.Resources>
-    <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="10">
-        <!-- File Picker Button and Path -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
-            <Button Content="Open cacerts File"
-                    Command="{Binding OpenFilePickerCommand}"
-                    Background="#FFFFFF"
-                    Foreground="#000000"
-                    BorderBrush="#E0E0E0" />
-            <TextBlock Text="{Binding SelectedFilePath, StringFormat='Selected File: {0}'}"
-                       Foreground="#FFFFFF"
-                       VerticalAlignment="Center"
-                       Margin="10,0,0,0" />
-        </StackPanel>
+        Width="1000" Height="700">
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{DynamicResource HeaderBackgroundColor}" Padding="10">
+            <TextBlock Text="CertBox" Classes="header" HorizontalAlignment="Center" />
+        </Border>
 
-        <!-- Search Bar -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
-            <TextBox Watermark="Search certificates..."
-                     Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
-                     Width="300"
-                     Background="#000000"
-                     Foreground="#FFFFFF"
-                     BorderBrush="#E0E0E0"
-                     BorderThickness="1" />
-            <Button Content="Import"
-                    Command="{Binding ImportCommand}"
-                    Background="#FFFFFF"
-                    Foreground="#000000"
-                    BorderBrush="#E0E0E0"
-                    IsEnabled="{Binding CanImport}" />
-            <Button Content="Remove"
-                    Command="{Binding RemoveCommand}"
-                    Background="#FFFFFF"
-                    Foreground="#000000"
-                    BorderBrush="#E0E0E0"
-                    IsEnabled="{Binding CanRemove}" />
-        </StackPanel>
+        <!-- Error Pane -->
+        <Border Grid.Row="1" Background="#FF3333" Padding="10" IsVisible="{Binding IsErrorPaneVisible}">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding ErrorMessage}" Classes="body" Foreground="#FFFFFF" TextWrapping="Wrap" />
+                <Button Grid.Column="1" Content="✖"
+                        Command="{Binding $parent[Window].DataContext.IsErrorPaneVisible, Converter={x:Static converters:BoolConverters.Not}}" />
+            </Grid>
+        </Border>
 
-        <!-- Certificate Table -->
-        <DataGrid Grid.Row="2"
-                  ItemsSource="{Binding Certificates}"
-                  SelectedItem="{Binding SelectedCertificate, Mode=TwoWay}"
-                  SelectionMode="Single"
-                  AutoGenerateColumns="False"
-                  Background="#000000"
-                  BorderBrush="#E0E0E0"
-                  BorderThickness="1"
-                  HeadersVisibility="All">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Alias"
-                                    Binding="{Binding Alias}"
-                                    IsReadOnly="True"
-                                    Foreground="#FFFFFF" />
-                <DataGridTextColumn Header="Issuer"
-                                    Binding="{Binding Issuer}"
-                                    IsReadOnly="True"
-                                    Foreground="#FFFFFF" />
-                <DataGridTextColumn Header="Subject"
-                                    Binding="{Binding Subject}"
-                                    IsReadOnly="True"
-                                    Foreground="#FFFFFF" />
-                <DataGridTemplateColumn Header="Expiry"
-                                        IsReadOnly="True">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding ExpiryDate}"
-                                       Foreground="{Binding IsExpired, Converter={StaticResource ExpiredColorConverter}}"
-                                       VerticalAlignment="Center" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+        <!-- Main Content -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,5,300">
+            <Grid RowDefinitions="Auto,Auto,*">
+                <!-- Search and Buttons -->
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,10">
+                    <TextBox Watermark="Search certificates..."
+                             Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
+                    <Button Grid.Column="1" Margin="5,0" Command="{Binding ClearSearchCommand}">
+                        <Button.Content>
+                            <TextBlock Text="Clear" />
+                        </Button.Content>
+                    </Button>
+                    <Button Grid.Column="2" Command="{Binding OpenFilePickerCommand}" Margin="5,0">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <PathIcon Data="{StaticResource Icon.OpenFolder}" Width="16" Height="16"
+                                          Foreground="{DynamicResource ForegroundColor}" />
+                                <TextBlock Text="Open cacerts File" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button Grid.Column="3" Command="{Binding ImportCommand}" Margin="5,0">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <PathIcon Data="{StaticResource Icon.Import}" Width="16" Height="16"
+                                          Foreground="{DynamicResource ForegroundColor}" />
+                                <TextBlock Text="Import" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </Grid>
+
+                <!-- DataGrid -->
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Certificates}"
+                          SelectedItem="{Binding SelectedCertificate, Mode=TwoWay}" AutoGenerateColumns="False"
+                          CanUserSortColumns="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Alias" Binding="{Binding Alias}" Width="*" />
+                        <DataGridTextColumn Header="Issuer" Binding="{Binding Issuer}" Width="*" />
+                        <DataGridTextColumn Header="Subject" Binding="{Binding Subject}" Width="*" />
+                        <DataGridTextColumn Header="Expiry"
+                                            Binding="{Binding ExpiryDate, StringFormat=\{0:MM/dd/yyyy HH:mm:ss tt\}}"
+                                            Width="*" />
+                    </DataGrid.Columns>
+                    <DataGrid.Styles>
+                        <Style Selector="DataGridRow">
+                            <!-- No highlighting for now -->
+                        </Style>
+                        <Style Selector="DataGridRow:selected /template/ ContentPresenter">
+                            <Setter Property="Background" Value="#333333" />
+                        </Style>
+                        <Style Selector="DataGridCell">
+                            <Setter Property="BorderBrush" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                        </Style>
+                        <Style Selector="DataGridCell:focus">
+                            <Setter Property="BorderBrush" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                        </Style>
+                    </DataGrid.Styles>
+                </DataGrid>
+
+                <!-- Remove Button -->
+                <Button Grid.Row="2" HorizontalAlignment="Right" Command="{Binding RemoveCommand}"
+                        IsEnabled="{Binding CanRemove}" Margin="0,10,0,0">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <PathIcon Data="{StaticResource Icon.Remove}" Width="16" Height="16"
+                                      Foreground="{DynamicResource ForegroundColor}" />
+                            <TextBlock Text="Remove" />
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+            </Grid>
+
+            <!-- GridSplitter -->
+            <GridSplitter Grid.Column="1" Width="5" Background="{DynamicResource BorderColor}"
+                          IsVisible="{Binding SelectedCertificate, Converter={x:Static converters:BoolConverters.IsNotNull}}" />
+
+            <!-- Details Pane -->
+            <Border Grid.Column="2" Background="{DynamicResource HeaderBackgroundColor}" Margin="10,0,0,0" Padding="10"
+                    CornerRadius="4"
+                    IsVisible="{Binding SelectedCertificate, Converter={x:Static converters:BoolConverters.IsNotNull}}">
+                <Border.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.3" />
+                    </Transitions>
+                </Border.Transitions>
+                <ScrollViewer
+                    Opacity="{Binding $parent[Border].IsVisible, Converter={x:Static converters:BoolConverters.ToDouble}}">
+                    <TextBlock Text="{Binding SelectedCertificate.Details}" Classes="body" TextWrapping="Wrap" />
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="3" Background="{DynamicResource HeaderBackgroundColor}" Padding="5">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding SelectedFilePath, StringFormat='Selected File: {0}'}" Classes="body"
+                           VerticalAlignment="Center" Margin="5,0" />
+                <Button Grid.Column="1" Padding="5,2" Command="{Binding ToggleThemeCommand}">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="3">
+                            <PathIcon Data="{StaticResource Icon.ToggleTheme}" Width="14" Height="16"
+                                      Foreground="{DynamicResource ForegroundColor}" />
+                            <TextBlock Text="Toggle" />
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

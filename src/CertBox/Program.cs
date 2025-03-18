@@ -1,5 +1,4 @@
-// src/CertBox/Program.cs
-
+using System.Reflection;
 using Avalonia;
 using CertBox.Common;
 using CertBox.Services;
@@ -22,6 +21,7 @@ namespace CertBox
         {
             _applicationContext = new ApplicationContext(AppDomain.CurrentDomain.BaseDirectory, 6);
             ConfigureServices();
+            DebugResources();
             BuildAvaloniaApp()
                 .StartWithClassicDesktopLifetime(args);
         }
@@ -30,6 +30,20 @@ namespace CertBox
             => AppBuilder.Configure<App>()
                 .UsePlatformDetect()
                 .LogToTrace();
+
+        private static void DebugResources()
+        {
+            var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogDebug("Debugging embedded resources...");
+
+            var assembly = Assembly.GetExecutingAssembly();
+            var resourceNames = assembly.GetManifestResourceNames();
+
+            foreach (var resourceName in resourceNames)
+            {
+                logger.LogInformation("Found embedded resource: {ResourceName}", resourceName);
+            }
+        }
 
         private static void ConfigureServices()
         {
@@ -74,6 +88,7 @@ namespace CertBox
             services.AddTransient<MainWindowViewModel>();
             services.AddTransient<MainWindow>();
             services.AddTransient<CertificateService>();
+            services.AddSingleton<IThemeManager>(provider => new ThemeManager(Application.Current));
 
             _serviceProvider = services.BuildServiceProvider();
 

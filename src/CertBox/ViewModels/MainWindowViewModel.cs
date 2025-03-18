@@ -15,6 +15,8 @@ namespace CertBox.ViewModels
         private readonly ILogger<MainWindowViewModel> _logger;
         private readonly CertificateService _certificateService;
         private readonly IApplicationContext _applicationContext;
+        private readonly IThemeManager _themeManager;
+        private ObservableCollection<CertificateModel> _allCertificates = new();
 
         [ObservableProperty]
         private string _searchQuery = string.Empty;
@@ -29,14 +31,27 @@ namespace CertBox.ViewModels
         [ObservableProperty]
         private CertificateModel _selectedCertificate;
 
+        [ObservableProperty]
+        private string _errorMessage;
+
+        [ObservableProperty]
+        private bool _isErrorPaneVisible;
+
         private string DefaultCacertsPath;
 
-        public MainWindowViewModel(ILogger<MainWindowViewModel> logger, CertificateService certificateService,
-            IApplicationContext applicationContext)
+        public MainWindowViewModel(
+            ILogger<MainWindowViewModel> logger,
+            CertificateService certificateService,
+            IApplicationContext applicationContext,
+            IThemeManager themeManager)
         {
             _logger = logger;
             _certificateService = certificateService;
             _applicationContext = applicationContext;
+            _themeManager = themeManager;
+
+            IsErrorPaneVisible = false;
+            ErrorMessage = string.Empty;
 
             SetDefaultCacertsFile();
 
@@ -46,13 +61,12 @@ namespace CertBox.ViewModels
                 SelectedFilePath = DefaultCacertsPath;
             }
 
-            // Defer loading until triggered
+            PropertyChanged += OnPropertyChanged;
         }
 
         private void SetDefaultCacertsFile()
         {
 #if DEBUG
-            // Compute the path relative to the executable directory with correct navigation
             DefaultCacertsPath = _applicationContext.DefaultCacertsPath;
 #else
             // TODO: Find the default cacerts file based on the user's JAVA_HOME variable or PATH if JAVA_HOME doesn't exist.
@@ -67,10 +81,41 @@ namespace CertBox.ViewModels
             }
         }
 
+        private void OnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(SearchQuery))
+            {
+                FilterCertificates();
+            }
+        }
+
+        private void FilterCertificates()
+        {
+            if (string.IsNullOrWhiteSpace(SearchQuery))
+            {
+                Certificates = new ObservableCollection<CertificateModel>(_allCertificates);
+            }
+            else
+            {
+                Certificates = new ObservableCollection<CertificateModel>(
+                    _allCertificates.Where(c =>
+                        c.Alias.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                        c.Issuer.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                        c.Subject.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                        c.ExpiryDate.ToString().Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+        }
+
+        [RelayCommand]
+        private void ClearSearch()
+        {
+            SearchQuery = string.Empty;
+        }
+
         [RelayCommand]
         private async Task OpenFilePicker()
         {
-            // Notify the view to open the file picker
             if (OpenFilePickerRequested != null)
             {
                 var filePath = await OpenFilePickerRequested.Invoke();
@@ -93,17 +138,20 @@ namespace CertBox.ViewModels
                 var certificates = _certificateService.GetCertificates();
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    Certificates.Clear();
+                    _allCertificates.Clear();
                     foreach (var cert in certificates)
                     {
-                        Certificates.Add(cert);
+                        _allCertificates.Add(cert);
                     }
+
+                    Certificates = new ObservableCollection<CertificateModel>(_allCertificates);
                 });
                 _logger.LogInformation("Certificates loaded successfully");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading certificates");
+                ShowError("Error loading certificates: " + ex.Message);
             }
         }
 
@@ -113,15 +161,12 @@ namespace CertBox.ViewModels
             if (string.IsNullOrEmpty(SelectedFilePath) || !File.Exists(SelectedFilePath))
             {
                 _logger.LogWarning("No keystore loaded for import");
+                ShowError("No keystore loaded for import.");
                 return;
             }
 
-            // TODO: Check for to see if the certificate already exists before importing.
-            // TODO: Show confirmation message prior to importing if certificate is expired.
-
             try
             {
-                // Notify the view to open the file picker for importing a certificate
                 if (ImportCertificateRequested != null)
                 {
                     var certPath = await ImportCertificateRequested.Invoke();
@@ -130,7 +175,7 @@ namespace CertBox.ViewModels
                         var cert = new X509Certificate2(certPath);
                         var alias = Path.GetFileNameWithoutExtension(certPath);
                         _certificateService.ImportCertificate(alias, cert);
-                        await LoadCertificatesAsync(SelectedFilePath); // Refresh the list
+                        await LoadCertificatesAsync(SelectedFilePath);
                         _logger.LogInformation("Imported certificate with alias: {Alias}", alias);
                     }
                 }
@@ -138,6 +183,7 @@ namespace CertBox.ViewModels
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error importing certificate");
+                ShowError("Error importing certificate: " + ex.Message);
             }
         }
 
@@ -152,6 +198,7 @@ namespace CertBox.ViewModels
             if (_selectedCertificate == null)
             {
                 _logger.LogWarning("No certificate selected for removal");
+                ShowError("No certificate selected for removal.");
                 return;
             }
 
@@ -159,13 +206,14 @@ namespace CertBox.ViewModels
             {
                 var alias = _selectedCertificate.Alias;
                 _certificateService.RemoveCertificate(alias);
-                await LoadCertificatesAsync(SelectedFilePath); // Refresh the list
+                await LoadCertificatesAsync(SelectedFilePath);
                 _logger.LogInformation("Removed certificate with alias: {Alias}", alias);
-                SelectedCertificate = null; // Clear selection
+                SelectedCertificate = null;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error removing certificate");
+                ShowError("Error removing certificate: " + ex.Message);
             }
         }
 
@@ -174,10 +222,23 @@ namespace CertBox.ViewModels
             return _selectedCertificate != null;
         }
 
+        [RelayCommand]
+        private void ToggleTheme()
+        {
+            _themeManager.ToggleTheme();
+        }
+
         public event Func<Task<string>> ImportCertificateRequested;
+
+        private void ShowError(string message)
+        {
+            ErrorMessage = message;
+            IsErrorPaneVisible = true;
+        }
 
         partial void OnSearchQueryChanged(string value)
         {
+            FilterCertificates();
         }
     }
 }

@@ -1,9 +1,32 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:CertBox.Converters"
              x:Class="CertBox.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- Custom Converters -->
+            <converters:BoolToClassConverter x:Key="BoolToClassConverter" />
+
+            <!-- Font Resources -->
+            <FontFamily x:Key="InterFont">
+                avares://CertBox/Assets/Inter-Regular.ttf#Inter-Regular,
+                avares://CertBox/Assets/Inter-SemiBold.ttf#Inter-SemiBold,
+                avares://CertBox/Assets/Inter-Medium.ttf#Inter-Medium,
+                avares://CertBox/Assets/Inter-Bold.ttf#Inter-Bold,
+                avares://CertBox/Assets/Inter-Light.ttf#Inter-Light,
+                avares://CertBox/Assets/Inter-Thin.ttf#Inter-Thin
+            </FontFamily>
+
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="/Assets/Icons.axaml" />
+                <ResourceInclude Source="/Assets/Themes.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
     <Application.Styles>
         <FluentTheme DensityStyle="Compact" />
         <StyleInclude Source="avares://Avalonia.Themes.Fluent/FluentTheme.xaml" />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
+        <StyleInclude Source="Styles/Styles.axaml" />
     </Application.Styles>
 </Application>
