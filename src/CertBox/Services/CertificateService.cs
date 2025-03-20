@@ -1,4 +1,9 @@
+// src/CertBox/Services/CertificateService.cs
+
+using System.Collections.ObjectModel;
 using System.Security.Cryptography.X509Certificates;
+using Avalonia.Threading;
+using CertBox.Common;
 using CertBox.Models;
 using java.io;
 using java.security;
@@ -13,11 +18,15 @@ namespace CertBox.Services
         private KeyStore _keyStore;
         private string _currentPath;
         private string _currentPassword;
+        private readonly ObservableCollection<CertificateModel> _allCertificates;
 
         public CertificateService(ILogger<CertificateService> logger)
         {
             _logger = logger;
+            _allCertificates = new ObservableCollection<CertificateModel>();
         }
+
+        public ObservableCollection<CertificateModel> AllCertificates => _allCertificates;
 
         public void LoadKeystore(string path, string password)
         {
@@ -136,6 +145,32 @@ namespace CertBox.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error removing certificate");
+                throw;
+            }
+        }
+
+        public async Task LoadCertificatesAsync(string keystorePath, string password = Constants.DefaultKeystorePassword)
+        {
+            try
+            {
+                _logger.LogDebug("Starting to load certificates from: {KeystorePath}", keystorePath);
+                LoadKeystore(keystorePath, password);
+                var certificates = GetCertificates();
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    _allCertificates.Clear();
+                    foreach (var cert in certificates)
+                    {
+                        _allCertificates.Add(cert);
+                    }
+
+                    _logger.LogDebug("Loaded {Count} certificates into AllCertificates", _allCertificates.Count);
+                });
+                _logger.LogInformation("Certificates loaded successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading certificates from {KeystorePath}", keystorePath);
                 throw;
             }
         }

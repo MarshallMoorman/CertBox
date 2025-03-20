@@ -1,6 +1,7 @@
+// src/CertBox/ViewModels/MainWindowViewModel.cs
+
 using System.Collections.ObjectModel;
 using System.Security.Cryptography.X509Certificates;
-using Avalonia.Threading;
 using CertBox.Common;
 using CertBox.Models;
 using CertBox.Services;
@@ -13,16 +14,22 @@ namespace CertBox.ViewModels
     public partial class MainWindowViewModel : ObservableObject
     {
         private readonly ILogger<MainWindowViewModel> _logger;
+        private readonly IKeystoreSearchService _searchService;
         private readonly CertificateService _certificateService;
         private readonly IApplicationContext _applicationContext;
         private readonly IThemeManager _themeManager;
-        private ObservableCollection<CertificateModel> _allCertificates = new();
+        private readonly UserConfigService _userConfigService;
+        private readonly CertificateFilterService _filterService;
+        private readonly DeepSearchService _deepSearchService;
+        private readonly ViewState _viewState;
 
         [ObservableProperty]
         private string _searchQuery = string.Empty;
 
         [ObservableProperty]
-        private ObservableCollection<CertificateModel> _certificates = new();
+        private ObservableCollection<CertificateModel> _certificates;
+
+        public ObservableCollection<string> KeystoreFiles => _searchService.KeystoreFiles;
 
         [ObservableProperty]
         private string _selectedFilePath = string.Empty;
@@ -31,43 +38,84 @@ namespace CertBox.ViewModels
         [ObservableProperty]
         private CertificateModel _selectedCertificate;
 
-        [ObservableProperty]
-        private string _errorMessage;
+        public string ErrorMessage
+        {
+            get => _viewState.ErrorMessage;
+            set => _viewState.ErrorMessage = value;
+        }
 
-        [ObservableProperty]
-        private bool _isErrorPaneVisible;
+        public bool IsErrorPaneVisible
+        {
+            get => _viewState.IsErrorPaneVisible;
+            set => _viewState.IsErrorPaneVisible = value;
+        }
 
-        private string DefaultCacertsPath;
+        public bool IsDeepSearchRunning
+        {
+            get => _viewState.IsDeepSearchRunning;
+            set => _viewState.IsDeepSearchRunning = value;
+        }
+
+        private string DefaultKeystorePath;
 
         public MainWindowViewModel(
             ILogger<MainWindowViewModel> logger,
             CertificateService certificateService,
+            IKeystoreSearchService searchService,
             IApplicationContext applicationContext,
-            IThemeManager themeManager)
+            IThemeManager themeManager,
+            UserConfigService userConfigService,
+            CertificateFilterService filterService,
+            DeepSearchService deepSearchService,
+            ViewState viewState)
         {
             _logger = logger;
             _certificateService = certificateService;
+            _searchService = searchService;
             _applicationContext = applicationContext;
             _themeManager = themeManager;
+            _userConfigService = userConfigService;
+            _filterService = filterService;
+            _deepSearchService = deepSearchService;
+            _viewState = viewState;
 
-            IsErrorPaneVisible = false;
-            ErrorMessage = string.Empty;
+            // Initialize Certificates with the service's AllCertificates
+            _certificates = _certificateService.AllCertificates;
 
-            SetDefaultCacertsFile();
+            _viewState.IsErrorPaneVisible = false;
+            _viewState.ErrorMessage = string.Empty;
+            _viewState.IsDeepSearchRunning = false;
 
-            // Preselect test cacerts file in debug mode if it exists
-            if (File.Exists(DefaultCacertsPath))
+            SetDefaultKeystorePath();
+
+            // Load the last keystore path from user config
+            if (!string.IsNullOrEmpty(_userConfigService.Config.LastKeystorePath))
             {
-                SelectedFilePath = DefaultCacertsPath;
+                if (File.Exists(_userConfigService.Config.LastKeystorePath))
+                {
+                    SelectedFilePath = _userConfigService.Config.LastKeystorePath;
+                }
+                else
+                {
+                    _logger.LogWarning("Last keystore path from user config does not exist: {Path}",
+                        _userConfigService.Config.LastKeystorePath);
+                    ShowError($"Last keystore path does not exist: {_userConfigService.Config.LastKeystorePath}");
+                }
             }
+            else if (File.Exists(DefaultKeystorePath)) // Preselect test cacerts file in debug mode if it exists
+            {
+                SelectedFilePath = DefaultKeystorePath;
+            }
+
+            _searchService.StartSearch();
 
             PropertyChanged += OnPropertyChanged;
         }
 
-        private void SetDefaultCacertsFile()
+        private void SetDefaultKeystorePath()
         {
 #if DEBUG
-            DefaultCacertsPath = _applicationContext.DefaultCacertsPath;
+            DefaultKeystorePath = _applicationContext.DefaultKeystorePath;
 #else
             // TODO: Find the default cacerts file based on the user's JAVA_HOME variable or PATH if JAVA_HOME doesn't exist.
 #endif
@@ -75,9 +123,26 @@ namespace CertBox.ViewModels
 
         public async Task InitializeAsync()
         {
-            if (!string.IsNullOrEmpty(SelectedFilePath) && File.Exists(SelectedFilePath))
+            if (!string.IsNullOrEmpty(SelectedFilePath))
             {
-                await LoadCertificatesAsync(SelectedFilePath);
+                if (!File.Exists(SelectedFilePath))
+                {
+                    _logger.LogWarning("Selected keystore file does not exist: {Path}", SelectedFilePath);
+                    ShowError($"Selected keystore file does not exist: {SelectedFilePath}");
+                    return;
+                }
+
+                try
+                {
+                    // Add the keystore path to the list if not already present
+                    _searchService.AddKeystorePath(SelectedFilePath);
+                    await _certificateService.LoadCertificatesAsync(SelectedFilePath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error loading certificates from {Path}", SelectedFilePath);
+                    ShowError($"Error loading certificates from {SelectedFilePath}: {ex.Message}");
+                }
             }
         }
 
@@ -85,32 +150,20 @@ namespace CertBox.ViewModels
         {
             if (e.PropertyName == nameof(SearchQuery))
             {
-                FilterCertificates();
+                Certificates = _filterService.FilterCertificates(SearchQuery);
             }
-        }
-
-        private void FilterCertificates()
-        {
-            if (string.IsNullOrWhiteSpace(SearchQuery))
+            else if (e.PropertyName == nameof(SelectedFilePath))
             {
-                Certificates = new ObservableCollection<CertificateModel>(_allCertificates);
-            }
-            else
-            {
-                Certificates = new ObservableCollection<CertificateModel>(
-                    _allCertificates.Where(c =>
-                        c.Alias.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
-                        c.Issuer.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
-                        c.Subject.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
-                        c.ExpiryDate.ToString().Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
-                );
+                // Save the selected keystore path to user config
+                _userConfigService.Config.LastKeystorePath = SelectedFilePath;
+                _userConfigService.SaveConfig();
             }
         }
 
         [RelayCommand]
         private void ClearSearch()
         {
-            SearchQuery = string.Empty;
+            SearchQuery = _filterService.ClearSearch();
         }
 
         [RelayCommand]
@@ -121,39 +174,41 @@ namespace CertBox.ViewModels
                 var filePath = await OpenFilePickerRequested.Invoke();
                 if (!string.IsNullOrEmpty(filePath))
                 {
-                    SelectedFilePath = filePath;
-                    await LoadCertificatesAsync(SelectedFilePath);
+                    if (!File.Exists(filePath))
+                    {
+                        _logger.LogWarning("Selected keystore file does not exist: {Path}", filePath);
+                        ShowError($"Selected keystore file does not exist: {filePath}");
+                        return;
+                    }
+
+                    try
+                    {
+                        // Add the keystore path to the list if not already present
+                        _searchService.AddKeystorePath(filePath);
+                        await _certificateService.LoadCertificatesAsync(filePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error loading certificates from {Path}", filePath);
+                        ShowError($"Error loading certificates from {filePath}: {ex.Message}");
+                    }
                 }
             }
         }
 
-        public event Func<Task<string>> OpenFilePickerRequested;
-
-        private async Task LoadCertificatesAsync(string cacertsPath, string password = Constants.DefaultKeystorePassword)
+        [RelayCommand]
+        private async Task StartDeepSearch()
         {
-            try
-            {
-                _logger.LogDebug("Starting to load certificates from: {CacertsPath}", cacertsPath);
-                _certificateService.LoadKeystore(cacertsPath, password);
-                var certificates = _certificateService.GetCertificates();
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    _allCertificates.Clear();
-                    foreach (var cert in certificates)
-                    {
-                        _allCertificates.Add(cert);
-                    }
-
-                    Certificates = new ObservableCollection<CertificateModel>(_allCertificates);
-                });
-                _logger.LogInformation("Certificates loaded successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading certificates");
-                ShowError("Error loading certificates: " + ex.Message);
-            }
+            await _deepSearchService.StartDeepSearch();
         }
+
+        [RelayCommand]
+        private void CancelDeepSearch()
+        {
+            _deepSearchService.CancelDeepSearch();
+        }
+
+        public event Func<Task<string>> OpenFilePickerRequested;
 
         [RelayCommand(CanExecute = nameof(CanImport))]
         private async Task Import()
@@ -172,10 +227,17 @@ namespace CertBox.ViewModels
                     var certPath = await ImportCertificateRequested.Invoke();
                     if (!string.IsNullOrEmpty(certPath))
                     {
+                        if (!File.Exists(certPath))
+                        {
+                            _logger.LogWarning("Selected certificate file does not exist: {Path}", certPath);
+                            ShowError($"Selected certificate file does not exist: {certPath}");
+                            return;
+                        }
+
                         var cert = new X509Certificate2(certPath);
                         var alias = Path.GetFileNameWithoutExtension(certPath);
                         _certificateService.ImportCertificate(alias, cert);
-                        await LoadCertificatesAsync(SelectedFilePath);
+                        await _certificateService.LoadCertificatesAsync(SelectedFilePath);
                         _logger.LogInformation("Imported certificate with alias: {Alias}", alias);
                     }
                 }
@@ -183,13 +245,20 @@ namespace CertBox.ViewModels
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error importing certificate");
-                ShowError("Error importing certificate: " + ex.Message);
+                ShowError($"Error importing certificate: {ex.Message}");
             }
+        }
+
+        [RelayCommand]
+        private void ClearError()
+        {
+            _viewState.IsErrorPaneVisible = false;
+            _viewState.ErrorMessage = string.Empty;
         }
 
         private bool CanImport()
         {
-            return !string.IsNullOrEmpty(SelectedFilePath);
+            return !string.IsNullOrEmpty(SelectedFilePath) && File.Exists(SelectedFilePath);
         }
 
         [RelayCommand(CanExecute = nameof(CanRemove))]
@@ -206,14 +275,14 @@ namespace CertBox.ViewModels
             {
                 var alias = _selectedCertificate.Alias;
                 _certificateService.RemoveCertificate(alias);
-                await LoadCertificatesAsync(SelectedFilePath);
+                await _certificateService.LoadCertificatesAsync(SelectedFilePath);
                 _logger.LogInformation("Removed certificate with alias: {Alias}", alias);
                 SelectedCertificate = null;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error removing certificate");
-                ShowError("Error removing certificate: " + ex.Message);
+                ShowError($"Error removing certificate: {ex.Message}");
             }
         }
 
@@ -230,15 +299,15 @@ namespace CertBox.ViewModels
 
         public event Func<Task<string>> ImportCertificateRequested;
 
-        private void ShowError(string message)
+        public void ShowError(string message)
         {
-            ErrorMessage = message;
-            IsErrorPaneVisible = true;
+            _viewState.ErrorMessage = message;
+            _viewState.IsErrorPaneVisible = true;
         }
 
         partial void OnSearchQueryChanged(string value)
         {
-            FilterCertificates();
+            Certificates = _filterService.FilterCertificates(value);
         }
     }
 }

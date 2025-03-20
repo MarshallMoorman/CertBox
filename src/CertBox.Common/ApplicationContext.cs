@@ -1,12 +1,8 @@
-using System;
-using System.IO;
-using System.Linq;
-
 namespace CertBox.Common;
 
 public class ApplicationContext : IApplicationContext
 {
-    private const string DefaultCacertsSuffix = "tests/resources/test_cacerts";
+    private const string DefaultKeystoreSuffix = "tests/resources/test_cacerts";
     private const string DefaultSampleCertsSuffix = "tests/resources/sample_certs";
     private const string LogsDirectoryName = "logs";
     private readonly string _pathToRoot;
@@ -26,10 +22,17 @@ public class ApplicationContext : IApplicationContext
 
     public virtual string AppSettingsPath => Path.GetFullPath(Path.Combine(BasePath, "appsettings.json"));
 
+    public virtual string UserSettingsPath
+        => Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".certbox"));
+
+    public virtual string UserConfigPath => Path.GetFullPath(Path.Combine(UserSettingsPath, "user_config.json"));
+
+    public virtual string UserKeystoreCachePath => Path.GetFullPath(Path.Combine(UserSettingsPath, "keystore_cache.json"));
+
     public virtual string LogPath => Path.GetFullPath(Path.Combine(BasePath, LogsDirectoryName));
     public virtual string RepoPath => Path.GetFullPath(Path.Combine(BasePath, _pathToRoot));
 
-    public virtual string DefaultCacertsPath => Path.GetFullPath(Path.Combine(RepoPath, DefaultCacertsSuffix));
+    public virtual string DefaultKeystorePath => Path.GetFullPath(Path.Combine(RepoPath, DefaultKeystoreSuffix));
 
     public virtual string DefaultSampleCertsPath => Path.GetFullPath(Path.Combine(RepoPath, DefaultSampleCertsSuffix));
 }

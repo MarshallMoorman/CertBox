@@ -162,25 +162,7 @@ jobs:
           mkdir -p ./publish/CertBox.app/Contents/Resources
           cp ./publish/osx-arm64/CertBox ./publish/CertBox.app/Contents/MacOS/
           cp src/CertBox/Assets/certbox.ico ./publish/CertBox.app/Contents/Resources/CertBox.icns
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > ./publish/CertBox.app/Contents/Info.plist
-          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '<plist version="1.0">' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '<dict>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <key>CFBundleName</key>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <string>CertBox</string>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <key>CFBundleIdentifier</key>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <string>com.marshallmoorman.certbox</string>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <key>CFBundleVersion</key>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <string>1.0.0</string>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <key>CFBundleExecutable</key>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <key>CFBundleExecutable</key>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <string>CertBox</string>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <key>CFBundleIconFile</key>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <string>CertBox.icns</string>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <key>CFBundlePackageType</key>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '  <string>APPL</string>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '</dict>' >> ./publish/CertBox.app/Contents/Info.plist
-          echo '</plist>' >> ./publish/CertBox.app/Contents/Info.plist
+          cp src/CertBox/Assets/Info.plist ./publish/CertBox.app/Contents/Info.plist
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -193,13 +175,15 @@ jobs:
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Explicitly grant write permissions for release job
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Debug RELEASE_TOKEN
-        run: echo "RELEASE_TOKEN secret is set: ${{ secrets.RELEASE_TOKEN != '' }}"
+        run: 'echo "RELEASE_TOKEN secret is set: ${{ secrets.RELEASE_TOKEN != '''' }}"'
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4

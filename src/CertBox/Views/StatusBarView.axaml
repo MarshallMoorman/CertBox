@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CertBox.ViewModels"
+             x:Class="CertBox.Views.StatusBarView"
+             x:DataType="vm:MainWindowViewModel">
+    <Border Background="{DynamicResource HeaderBackgroundColor}" Padding="5">
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding SelectedFilePath, StringFormat='Selected File: {0}'}" Classes="body"
+                       VerticalAlignment="Center" Margin="5,0" />
+            <Button Grid.Column="1" Padding="5,2" Command="{Binding ToggleThemeCommand}">
+                <Button.Content>
+                    <StackPanel Orientation="Horizontal" Spacing="3">
+                        <PathIcon Data="{StaticResource Icon.ToggleTheme}" Width="14" Height="16"
+                                  Foreground="{DynamicResource ForegroundColor}" />
+                        <TextBlock Text="Toggle" />
+                    </StackPanel>
+                </Button.Content>
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>

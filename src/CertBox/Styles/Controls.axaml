@@ -15,6 +15,21 @@
         <Setter Property="Cursor" Value="Hand" />
     </Style>
 
+    <!-- Grid Styles -->
+    <!-- Specific style for Grid named CertificateGrid -->
+    <Style Selector="Grid#CertificateGrid">
+        <Setter Property="Margin" Value="0,10,0,0" />
+    </Style>
+
+    <!-- ListBox Styles -->
+    <Style Selector="ListBox">
+        <Setter Property="Background" Value="{DynamicResource BackgroundColor}" />
+        <Setter Property="Foreground" Value="{DynamicResource ForegroundColor}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Margin" Value="0,10,0,0" />
+    </Style>
+
     <!-- DataGrid Styles -->
     <Style Selector="DataGrid">
         <Setter Property="Background" Value="#000000" />
@@ -22,24 +37,36 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Margin" Value="0,10,0,0" />
     </Style>
+    <!-- Specific style for DataGrid named CertificateList -->
+    <Style Selector="DataGrid#CertificateList">
+        <Setter Property="Margin" Value="0,10,10,0" />
+    </Style>
     <Style Selector="DataGridRow">
         <Setter Property="Background" Value="Transparent" />
     </Style>
     <!-- Selected Row Style -->
     <Style Selector="DataGridRow:selected /template/ ContentPresenter">
         <Setter Property="Background" Value="#333333" />
-    </Style>
-    <!-- Remove White Border on Clicked Cell -->
-    <Style Selector="DataGridCell">
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
     </Style>
-    <Style Selector="DataGridCell:focus">
+    <!-- Current Row Style -->
+    <Style Selector="DataGridRow:current /template/ ContentPresenter">
+        <Setter Property="Background" Value="#333333" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
     </Style>
     <!-- Expired Row Style -->
     <Style Selector="DataGridRow.expired">
         <Setter Property="Background" Value="#FF3333" />
+    </Style>
+    <!-- Grid Splitter Style -->
+    <Style Selector="GridSplitter">
+        <Setter Property="Background" Value="{DynamicResource BorderColor}" />
+        <Setter Property="Opacity" Value="0.5" />
+        <Setter Property="Cursor" Value="SizeAll" />
+    </Style>
+    <Style Selector="GridSplitter:pointerover">
+        <Setter Property="Opacity" Value="0.7" />
     </Style>
 </Styles>

@@ -8,12 +8,20 @@ CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage cer
 - Import certificates in common formats (`.pem`, `.crt`, `.cer`, `.der`), rejecting expired certificates.
 - Remove or replace existing certificates with selection in a `DataGrid`.
 - Reject expired certificates on import; highlight invalid/expired certificates in red (fixed vertical alignment issue in the `Expiry` column).
+- Highlight expired certificates in the `DataGrid` with a red background for the entire row, using the `IsExpired` property of `CertificateModel` to dynamically apply the `expired` class.
+- Persist user state in `~/.certbox/user_config.json`, including the last opened keystore path, selected theme (dark or light), and window size (width and height).
 - Cross-platform support: Windows, Linux, macOS (single-file executables + macOS `.app` bundle).
 - View all certificate fields (read-only) in a `cacerts` file with a searchable and filterable table-based UI using custom icons and the Inter font.
 - Added a fade-in animation for the details pane when a certificate is selected.
+- **UI Enhancements**:
+  - Added custom icons for "Deep Search", "Cancel Deep Search", and "Clear Search" buttons using `StreamGeometry` in `Assets/Icons.axaml`.
+  - Implemented a details pane that appears when a certificate is selected, taking 1/4 of the window width, with the `DataGrid` taking 3/4. When no certificate is selected, the details pane and splitter are hidden, and the `DataGrid` takes 100% width.
+  - Adjusted `GridSplitter` styling to be less harsh: set thickness to 1 pixel, increased opacity to 1.0, and added margins via adjacent elements (`DataGrid`, `ListBox`, details pane) to create visual gaps.
+  - Fixed vertical splitter resizing by using `ColumnDefinitions="3*,Auto,1*"` and moving margins to adjacent elements.
+  - Added a style targeting the `DataGrid` named `CertificateList` using `DataGrid#CertificateList` to apply a darker background (`#1A1A1A`) and thicker border (2 pixels).
 
 ## Getting Started
-1. Clone the repository: `git clone https://github.com/<your-username>/CertBox.git`
+1. Clone the repository: `git clone https://github.com/MarshallMoorman/CertBox.git`
 2. Navigate to `src/CertBox/`.
 3. Restore dependencies: `dotnet restore`
 4. Run the app: `dotnet run`
@@ -46,8 +54,4 @@ The default password for `cacerts` is `"changeit"`. You can select a `cacerts` f
 - Unit tests are set up in the CertBox.Tests project using xUnit, located in tests/CertBox.Tests.
 
 ## License
-MIT License - see [LICENSE](.LICENSE) for details.
-
-## Contributing 
-Contributions welcome! See CONTRIBUTING.md (to be added) for guidelines.
-
+MIT License - see [LICENSE](LICENSE) for details.

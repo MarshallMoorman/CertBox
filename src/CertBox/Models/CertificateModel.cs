@@ -15,9 +15,13 @@ public class CertificateModel
     {
         var sb = new StringBuilder();
         sb.AppendLine($"Alias: {Alias}");
+        sb.AppendLine();
         sb.AppendLine($"Subject: {Subject}");
+        sb.AppendLine();
         sb.AppendLine($"Issuer: {Issuer}");
+        sb.AppendLine();
         sb.AppendLine($"Expiry: {ExpiryDate}");
+        sb.AppendLine();
         sb.AppendLine($"Is Expired: {(IsExpired ? "Yes" : "No")}");
         return sb.ToString();
     }

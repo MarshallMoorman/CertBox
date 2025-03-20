@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CertBox.ViewModels"
+             x:Class="CertBox.Views.ErrorPaneView"
+             x:DataType="vm:MainWindowViewModel">
+    <Border Background="#FF3333" Padding="10" IsVisible="{Binding IsErrorPaneVisible}">
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding ErrorMessage}" Classes="body" Foreground="#FFFFFF" TextWrapping="Wrap" />
+            <Button Grid.Column="1"
+                    Command="{Binding ClearErrorCommand}">
+                <Button.Content>
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Data="{StaticResource Icon.Clear}" Width="16" Height="16"
+                                  Foreground="{DynamicResource ForegroundColor}" />
+                    </StackPanel>
+                </Button.Content>
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>

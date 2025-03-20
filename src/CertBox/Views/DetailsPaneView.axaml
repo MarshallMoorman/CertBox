@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CertBox.ViewModels"
+             xmlns:converters="clr-namespace:CertBox.Converters"
+             x:Class="CertBox.Views.DetailsPaneView"
+             x:DataType="vm:MainWindowViewModel">
+    <!-- Details Pane -->
+    <Border Name="DetailsPane"
+            Background="{DynamicResource HeaderBackgroundColor}"
+            Margin="10,0,0,0" Padding="10"
+            CornerRadius="4"
+            IsVisible="{Binding SelectedCertificate, Converter={x:Static converters:BoolConverters.IsNotNull}}">
+        <Border.Transitions>
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.3" />
+            </Transitions>
+        </Border.Transitions>
+        <ScrollViewer
+            Opacity="{Binding $parent[Border].IsVisible, Converter={x:Static converters:BoolConverters.ToDouble}}">
+            <TextBlock Text="{Binding SelectedCertificate.Details}" Classes="body" TextWrapping="Wrap" />
+        </ScrollViewer>
+    </Border>
+</UserControl>

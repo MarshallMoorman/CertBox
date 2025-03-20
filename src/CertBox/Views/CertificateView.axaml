@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CertBox.ViewModels"
+             x:Class="CertBox.Views.CertificateView"
+             x:DataType="vm:MainWindowViewModel">
+    <Grid x:Name="CertificateGrid" RowDefinitions="Auto,*">
+        <!-- Search in Keystore and clear search -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0, 10, 0, 0">
+            <!-- Search text box -->
+            <TextBox Watermark="Search certificates..."
+                     Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
+
+            <!-- Clear search button -->
+            <Button Margin="5,0" Command="{Binding ClearSearchCommand}">
+                <Button.Content>
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Data="{StaticResource Icon.Clear}" Width="16" Height="16"
+                                  Foreground="{DynamicResource ForegroundColor}" />
+                        <TextBlock Text="Clear" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button.Content>
+            </Button>
+
+            <!-- Remove Button -->
+            <Button x:Name="RemoveButton" Command="{Binding RemoveCommand}" Margin="5,0"
+                    IsEnabled="{Binding CanRemove}">
+                <Button.Content>
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Data="{StaticResource Icon.Remove}" Width="16" Height="16"
+                                  Foreground="{DynamicResource ForegroundColor}" />
+                        <TextBlock Text="Remove" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button.Content>
+            </Button>
+
+            <!-- Import certificate to current cacerts file -->
+            <Button Command="{Binding ImportCommand}" Margin="5,0">
+                <Button.Content>
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Data="{StaticResource Icon.Import}" Width="16" Height="16"
+                                  Foreground="{DynamicResource ForegroundColor}" />
+                        <TextBlock Text="Import" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button.Content>
+            </Button>
+        </StackPanel>
+
+        <!-- DataGrid -->
+        <DataGrid x:Name="CertificateList" Grid.Row="1" ItemsSource="{Binding Certificates}"
+                  SelectedItem="{Binding SelectedCertificate, Mode=TwoWay}" AutoGenerateColumns="False"
+                  CanUserSortColumns="True" CanUserResizeColumns="True" IsReadOnly="True"
+                  SelectionMode="Single"
+                  HorizontalScrollBarVisibility="Auto">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Alias" Binding="{Binding Alias}" Width="*" />
+                <DataGridTextColumn Header="Issuer" Binding="{Binding Issuer}" Width="*" />
+                <DataGridTextColumn Header="Subject" Binding="{Binding Subject}" Width="*" />
+                <DataGridTextColumn Header="Expiry"
+                                    Binding="{Binding ExpiryDate, StringFormat=\{0:MM/dd/yyyy HH:mm:ss tt\}}"
+                                    Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

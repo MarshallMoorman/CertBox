@@ -1,8 +1,12 @@
+// src/CertBox/Program.cs
+
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Avalonia;
 using CertBox.Common;
 using CertBox.Services;
 using CertBox.ViewModels;
+using CertBox.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -41,7 +45,7 @@ namespace CertBox
 
             foreach (var resourceName in resourceNames)
             {
-                logger.LogInformation("Found embedded resource: {ResourceName}", resourceName);
+                logger.LogDebug("Found embedded resource: {ResourceName}", resourceName);
             }
         }
 
@@ -82,13 +86,91 @@ namespace CertBox
 
             services.AddLogging(logging => logging.AddSerilog(Log.Logger, dispose: true));
 
+            services.AddSingleton<IKeystoreFinder>(provider =>
+            {
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    return new WindowsKeystoreFinder(loggerFactory.CreateLogger<WindowsKeystoreFinder>());
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    return new MacOsKeystoreFinder(loggerFactory.CreateLogger<MacOsKeystoreFinder>());
+
+                return new LinuxKeystoreFinder(loggerFactory.CreateLogger<LinuxKeystoreFinder>());
+            });
+            services.AddSingleton<IKeystoreSearchService>(provider =>
+            {
+                var finder = provider.GetRequiredService<IKeystoreFinder>();
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                var configuration = provider.GetRequiredService<IConfiguration>();
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    return new WindowsKeystoreSearchService(finder,
+                        loggerFactory.CreateLogger<WindowsKeystoreSearchService>(),
+                        configuration,
+                        _applicationContext);
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    return new MacOsKeystoreSearchService(finder,
+                        loggerFactory.CreateLogger<MacOsKeystoreSearchService>(),
+                        configuration,
+                        _applicationContext);
+
+                return new LinuxKeystoreSearchService(finder,
+                    loggerFactory.CreateLogger<LinuxKeystoreSearchService>(),
+                    configuration,
+                    _applicationContext);
+            });
+
             // Register services
             services.AddSingleton<IConfiguration>(configuration);
             services.AddSingleton<IApplicationContext>(_applicationContext);
-            services.AddTransient<MainWindowViewModel>();
-            services.AddTransient<MainWindow>();
-            services.AddTransient<CertificateService>();
-            services.AddSingleton<IThemeManager>(provider => new ThemeManager(Application.Current));
+            services.AddSingleton<ViewState>();
+            services.AddTransient<MainWindowViewModel>(provider => new MainWindowViewModel(
+                provider.GetRequiredService<ILogger<MainWindowViewModel>>(),
+                provider.GetRequiredService<CertificateService>(),
+                provider.GetRequiredService<IKeystoreSearchService>(),
+                provider.GetRequiredService<IApplicationContext>(),
+                provider.GetRequiredService<IThemeManager>(),
+                provider.GetRequiredService<UserConfigService>(),
+                provider.GetRequiredService<CertificateFilterService>(),
+                provider.GetRequiredService<DeepSearchService>(),
+                provider.GetRequiredService<ViewState>()
+            ));
+            services.AddTransient<MainWindow>(provider => new MainWindow(
+                provider.GetRequiredService<MainWindowViewModel>(),
+                provider.GetRequiredService<IApplicationContext>(),
+                provider.GetRequiredService<ILogger<MainWindowViewModel>>(),
+                provider.GetRequiredService<UserConfigService>(),
+                provider.GetRequiredService<CertificateService>(),
+                provider.GetRequiredService<KeystoreView>(),
+                provider.GetRequiredService<HeaderView>(),
+                provider.GetRequiredService<ErrorPaneView>(),
+                provider.GetRequiredService<CertificateView>(),
+                provider.GetRequiredService<DetailsPaneView>(),
+                provider.GetRequiredService<StatusBarView>()
+            ));
+            services.AddTransient<KeystoreView>(provider => new KeystoreView(
+                provider.GetRequiredService<CertificateService>(),
+                provider.GetRequiredService<ILogger<KeystoreView>>()
+            ));
+            services.AddTransient<CertificateView>(provider => new CertificateView(
+                provider.GetRequiredService<ILogger<CertificateView>>()
+            ));
+            services.AddTransient<HeaderView>();
+            services.AddTransient<ErrorPaneView>();
+            services.AddTransient<DetailsPaneView>();
+            services.AddTransient<StatusBarView>();
+            services.AddSingleton<CertificateService>();
+            services.AddSingleton<IThemeManager>(provider => new ThemeManager(
+                Application.Current,
+                provider.GetRequiredService<UserConfigService>()
+            ));
+            services.AddSingleton<UserConfigService>();
+            services.AddSingleton<CertificateFilterService>(provider => new CertificateFilterService(
+                provider.GetRequiredService<CertificateService>().AllCertificates
+            ));
+            services.AddSingleton<DeepSearchService>(provider => new DeepSearchService(
+                provider.GetRequiredService<IKeystoreSearchService>(),
+                provider.GetRequiredService<ILogger<DeepSearchService>>(),
+                provider.GetRequiredService<ViewState>()
+            ));
 
             _serviceProvider = services.BuildServiceProvider();
 

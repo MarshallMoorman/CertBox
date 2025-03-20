@@ -20,6 +20,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="/Assets/Icons.axaml" />
                 <ResourceInclude Source="/Assets/Themes.axaml" />
+                <ResourceInclude Source="/Assets/DataGridCellCustomControl.axaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

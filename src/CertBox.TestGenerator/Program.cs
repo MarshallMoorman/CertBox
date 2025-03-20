@@ -21,7 +21,7 @@ namespace CertBox.TestGenerator
             ConfigureServices();
             var generator = _serviceProvider.GetRequiredService<CertificateGenerator>();
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var outputPath = _applicationContext.DefaultCacertsPath;
+            var outputPath = _applicationContext.DefaultKeystorePath;
             var sampleDir = _applicationContext.DefaultSampleCertsPath;
             var password = Constants.DefaultKeystorePassword;
 
