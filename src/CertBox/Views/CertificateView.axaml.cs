@@ -1,11 +1,15 @@
 // src/CertBox/Views/CertificateView.axaml.cs
 
+using System.Security.Cryptography.X509Certificates;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CertBox.Models;
+using CertBox.Services;
 using CertBox.ViewModels;
 using Microsoft.Extensions.Logging;
 
@@ -13,10 +17,12 @@ namespace CertBox.Views
 {
     public partial class CertificateView : UserControl
     {
+        private readonly CertificateService _certificateService;
         private readonly ILogger<CertificateView> _logger;
 
-        public CertificateView(ILogger<CertificateView> logger)
+        public CertificateView(CertificateService certificateService, ILogger<CertificateView> logger)
         {
+            _certificateService = certificateService;
             _logger = logger;
 
             InitializeComponent();
@@ -57,6 +63,98 @@ namespace CertBox.Views
                         ScheduleUpdateDataGridRowClasses(certificateList);
                     }
                 };
+
+                // Add drag-and-drop handler
+                AddHandler(DragDrop.DropEvent, OnCertificateListDrop);
+                AddHandler(DragDrop.DragOverEvent, OnCertificateListDragOver);
+                AddHandler(DragDrop.DragLeaveEvent, OnCertificateListDragLeave);
+            }
+        }
+
+        private void OnCertificateListDragOver(object sender, DragEventArgs e)
+        {
+            var certificateList = this.FindControl<DataGrid>("CertificateList");
+            if (certificateList != null)
+            {
+                if (e.Data.Contains(DataFormats.Files))
+                {
+                    e.DragEffects = DragDropEffects.Copy;
+                    // Highlight the CertificateList during drag-over
+                    certificateList.BorderBrush = Brushes.Green;
+                    certificateList.BorderThickness = new Avalonia.Thickness(2);
+                }
+                else
+                {
+                    e.DragEffects = DragDropEffects.None;
+                    // Reset the border when not a valid drop
+                    certificateList.BorderBrush = Brushes.Transparent;
+                    certificateList.BorderThickness = new Avalonia.Thickness(0);
+                }
+            }
+
+            e.Handled = true;
+        }
+
+        private void OnCertificateListDragLeave(object sender, DragEventArgs e)
+        {
+            var certificateList = this.FindControl<DataGrid>("CertificateList");
+            if (certificateList != null)
+            {
+                // Reset the border when the drag leaves
+                certificateList.BorderBrush = Brushes.Transparent;
+                certificateList.BorderThickness = new Avalonia.Thickness(0);
+            }
+        }
+
+        private async void OnCertificateListDrop(object sender, DragEventArgs e)
+        {
+            var certificateList = this.FindControl<DataGrid>("CertificateList");
+            if (certificateList != null)
+            {
+                // Reset the border after drop
+                certificateList.BorderBrush = Brushes.Transparent;
+                certificateList.BorderThickness = new Avalonia.Thickness(0);
+            }
+
+            if (DataContext is MainWindowViewModel vm && e.Data.Contains(DataFormats.Files))
+            {
+                if (string.IsNullOrEmpty(vm.SelectedFilePath) || !File.Exists(vm.SelectedFilePath))
+                {
+                    _logger.LogWarning("No keystore loaded for import");
+                    vm.ShowError("No keystore loaded for import.");
+                    return;
+                }
+
+                var files = e.Data.GetFiles();
+                if (files != null)
+                {
+                    foreach (var file in files)
+                    {
+                        var certPath = file.Path.LocalPath;
+                        _logger.LogDebug("Dropped file on CertificateList: {Path}", certPath);
+
+                        if (!File.Exists(certPath))
+                        {
+                            _logger.LogWarning("Dropped certificate file does not exist: {Path}", certPath);
+                            vm.ShowError($"Dropped certificate file does not exist: {certPath}");
+                            continue;
+                        }
+
+                        try
+                        {
+                            var cert = new X509Certificate2(certPath);
+                            var alias = Path.GetFileNameWithoutExtension(certPath);
+                            _certificateService.ImportCertificate(alias, cert);
+                            await _certificateService.LoadCertificatesAsync(vm.SelectedFilePath);
+                            _logger.LogInformation("Imported certificate with alias: {Alias}", alias);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error importing certificate from dropped file {Path}", certPath);
+                            vm.ShowError($"Error importing certificate from {certPath}: {ex.Message}");
+                        }
+                    }
+                }
             }
         }
 

@@ -148,9 +148,11 @@ namespace CertBox
             ));
             services.AddTransient<KeystoreView>(provider => new KeystoreView(
                 provider.GetRequiredService<CertificateService>(),
+                provider.GetRequiredService<IKeystoreSearchService>(),
                 provider.GetRequiredService<ILogger<KeystoreView>>()
             ));
             services.AddTransient<CertificateView>(provider => new CertificateView(
+                provider.GetRequiredService<CertificateService>(),
                 provider.GetRequiredService<ILogger<CertificateView>>()
             ));
             services.AddTransient<HeaderView>();

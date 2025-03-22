@@ -184,11 +184,19 @@ namespace CertBox.Services
             }
             catch (InvalidOperationException ex)
             {
+                // Reset the keystore state on failure
+                _keyStore = null;
+                _currentPath = null;
+                _currentPassword = null;
                 _logger.LogError(ex, "Error loading certificates from {KeystorePath}", keystorePath);
                 throw; // Let MainWindowViewModel handle the user-friendly message
             }
             catch (Exception ex)
             {
+                // Reset the keystore state on failure
+                _keyStore = null;
+                _currentPath = null;
+                _currentPassword = null;
                 _logger.LogError(ex, "Error loading certificates from {KeystorePath}", keystorePath);
                 throw new InvalidOperationException($"Failed to load certificates from {keystorePath}: {ex.Message}", ex);
             }

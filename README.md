@@ -19,6 +19,13 @@ CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage cer
   - Adjusted `GridSplitter` styling to be less harsh: set thickness to 1 pixel, increased opacity to 1.0, and added margins via adjacent elements (`DataGrid`, `ListBox`, details pane) to create visual gaps.
   - Fixed vertical splitter resizing by using `ColumnDefinitions="3*,Auto,1*"` and moving margins to adjacent elements.
   - Added a style targeting the `DataGrid` named `CertificateList` using `DataGrid#CertificateList` to apply a darker background (`#1A1A1A`) and thicker border (2 pixels).
+- **Drag-and-Drop Support**:
+  - Added drag-and-drop functionality to open keystores by dropping files onto the `KeystoreList` and import certificates by dropping files onto the `CertificateList`.
+  - Implemented visual feedback for drag-and-drop with a green border around the `KeystoreList` and `CertificateList` during drag-over, using `DragOver` and `DragLeave` events in the code-behind.
+- **Error Handling and State Management**:
+  - Improved error handling in `MainWindowViewModel` by adding validation for invalid keystore paths and file access issues, with user-friendly error messages.
+  - Introduced a `ViewState` class to manage UI state (`IsErrorPaneVisible`, `IsDeepSearchRunning`, `ErrorMessage`), fixing binding issues for the error pane and deep search progress bar/cancel button.
+  - Fixed an `"Uninitialized keystore"` error during import by resetting the keystore state in `CertificateService` and clearing `SelectedFilePath` when loading fails.
 
 ## Getting Started
 1. Clone the repository: `git clone https://github.com/MarshallMoorman/CertBox.git`

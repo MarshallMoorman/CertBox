@@ -15,7 +15,7 @@ namespace CertBox.ViewModels
     {
         private readonly ILogger<MainWindowViewModel> _logger;
         private readonly IKeystoreSearchService _searchService;
-        private readonly CertificateService _certificateService;
+        public readonly CertificateService _certificateService;
         private readonly IApplicationContext _applicationContext;
         private readonly IThemeManager _themeManager;
         private readonly UserConfigService _userConfigService;
@@ -146,6 +146,7 @@ namespace CertBox.ViewModels
                 {
                     _logger.LogWarning("Selected keystore file does not exist: {Path}", SelectedFilePath);
                     ShowError($"Selected keystore file does not exist: {SelectedFilePath}");
+                    SelectedFilePath = string.Empty; // Clear the selected path if it doesn't exist
                     return;
                 }
 
@@ -159,6 +160,7 @@ namespace CertBox.ViewModels
                 {
                     _logger.LogError(ex, "Error loading certificates from {Path}", SelectedFilePath);
                     ShowError($"Error loading certificates from {SelectedFilePath}: {ex.Message}");
+                    SelectedFilePath = string.Empty; // Clear the selected path on failure
                 }
             }
         }
@@ -197,12 +199,14 @@ namespace CertBox.ViewModels
                         // Add the keystore path to the list if not already present
                         _searchService.AddKeystorePath(filePath);
                         await _certificateService.LoadCertificatesAsync(filePath);
+                        SelectedFilePath = filePath; // Update the selected path on success
                     }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to open keystore file");
                     ShowError($"Failed to open keystore file: {ex.Message}");
+                    SelectedFilePath = string.Empty; // Clear the selected path on failure
                 }
             }
         }

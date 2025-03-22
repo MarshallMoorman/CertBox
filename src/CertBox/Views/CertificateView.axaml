@@ -5,7 +5,7 @@
              x:DataType="vm:MainWindowViewModel">
     <Grid x:Name="CertificateGrid" RowDefinitions="Auto,*">
         <!-- Search in Keystore and clear search -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0, 10, 0, 0">
+        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0, 10, 0, 0">
             <!-- Search text box -->
             <TextBox Watermark="Search certificates..."
                      Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" />
@@ -50,7 +50,8 @@
                   SelectedItem="{Binding SelectedCertificate, Mode=TwoWay}" AutoGenerateColumns="False"
                   CanUserSortColumns="True" CanUserResizeColumns="True" IsReadOnly="True"
                   SelectionMode="Single"
-                  HorizontalScrollBarVisibility="Auto">
+                  HorizontalScrollBarVisibility="Auto"
+                  DragDrop.AllowDrop="True">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Alias" Binding="{Binding Alias}" Width="*" />
                 <DataGridTextColumn Header="Issuer" Binding="{Binding Issuer}" Width="*" />

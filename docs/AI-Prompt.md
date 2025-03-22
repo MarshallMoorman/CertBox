@@ -30,6 +30,17 @@ The app now features a table-based UI with custom icons, Inter font support, sea
   - Added a style targeting the `DataGrid` named `CertificateList` using `DataGrid#CertificateList` to apply a darker background (`#1A1A1A`) and thicker border (2 pixels).
   - Set margins programmatically in `MainWindow.axaml.cs` for the `DataGrid` and details pane to create gaps around the vertical splitter.
   - Removed orphaned `DataGridCell` styles from `Controls.axaml` after introducing a custom `ControlTheme` for `DataGridCell` to fix the selected cell border issue.
+- **Refactoring and State Management**:
+  - Refactored `MainWindowViewModel.cs` to improve error handling by adding validation for invalid keystore paths and file access issues, showing specific error messages to the user.
+  - Introduced a `ViewState` class to manage UI state properties (`IsErrorPaneVisible`, `IsDeepSearchRunning`, `ErrorMessage`), encapsulating state management and fixing binding issues by propagating `PropertyChanged` events from `ViewState` to `MainWindowViewModel`.
+  - Fixed an unhandled `InvalidOperationException` ("Invalid keystore format") when opening a non-keystore file by catching the exception in `CertificateService` and displaying a user-friendly error message in `MainWindowViewModel`.
+  - Fixed the "Clear Error" button and deep search progress bar/cancel button by ensuring `MainWindowViewModel` raises `PropertyChanged` events for `ViewState` properties.
+  - Updated `CertificateService` to raise `PropertyChanged` events for `AllCertificates` changes, ensuring the `DataGrid` row classes update after import/remove operations.
+  - Fixed an `"Uninitialized keystore"` error during import by resetting the `_keyStore` state in `CertificateService` and clearing `SelectedFilePath` in `MainWindowViewModel` when `LoadCertificatesAsync` fails.
+- **Drag-and-Drop Functionality**:
+  - Added drag-and-drop support for files from external applications (e.g., Finder, Explorer) to the `KeystoreList` (to open as a keystore) and `CertificateList` (to import as a certificate into the selected keystore).
+  - Implemented visual feedback for drag-and-drop by setting a green border on the `KeystoreList` and `CertificateList` during drag-over, using `DragOver` and `DragLeave` events in the code-behind, as Avalonia does not support drag-related pseudo-classes like `:dragover` or `IsDropTarget`.
+  - Fixed a visual feedback issue where the green border persisted on both controls by ensuring the border is reset on `DragLeave` and after a drop operation.
 
 Current date: March 20, 2025. Knowledge is continuously updated.
 
