@@ -1,3 +1,5 @@
+// src/CertBox/Views/CertificateView.axaml.cs
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -45,17 +47,14 @@ namespace CertBox.Views
                 {
                     if (e.Property == DataContextProperty && DataContext is MainWindowViewModel vm)
                     {
-                        vm.PropertyChanged += (s, e) =>
+                        // Subscribe to changes in AllCertificates
+                        vm.Certificates.CollectionChanged += (s, e) =>
                         {
-                            if (e.PropertyName == nameof(MainWindowViewModel.Certificates))
-                            {
-                                ScheduleUpdateDataGridRowClasses(certificateList);
-                            }
-                            else if (e.PropertyName == nameof(MainWindowViewModel.SelectedFilePath))
-                            {
-                                ScheduleUpdateDataGridRowClasses(certificateList);
-                            }
+                            ScheduleUpdateDataGridRowClasses(certificateList);
                         };
+
+                        // Initial update
+                        ScheduleUpdateDataGridRowClasses(certificateList);
                     }
                 };
             }

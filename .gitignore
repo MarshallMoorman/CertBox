@@ -400,3 +400,6 @@ FodyWeavers.xsd
 *.sln.iml
 
 .DS_Store
+tests/resources/*.*
+tests/resources/sample_certs/*.*
+tests/resources/test_cacerts

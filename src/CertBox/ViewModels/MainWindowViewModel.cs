@@ -86,6 +86,23 @@ namespace CertBox.ViewModels
             _viewState.ErrorMessage = string.Empty;
             _viewState.IsDeepSearchRunning = false;
 
+            // Subscribe to ViewState's PropertyChanged to propagate changes
+            _viewState.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(ViewState.ErrorMessage))
+                {
+                    OnPropertyChanged(nameof(ErrorMessage));
+                }
+                else if (e.PropertyName == nameof(ViewState.IsErrorPaneVisible))
+                {
+                    OnPropertyChanged(nameof(IsErrorPaneVisible));
+                }
+                else if (e.PropertyName == nameof(ViewState.IsDeepSearchRunning))
+                {
+                    OnPropertyChanged(nameof(IsDeepSearchRunning));
+                }
+            };
+
             SetDefaultKeystorePath();
 
             // Load the last keystore path from user config
@@ -161,37 +178,31 @@ namespace CertBox.ViewModels
         }
 
         [RelayCommand]
-        private void ClearSearch()
-        {
-            SearchQuery = _filterService.ClearSearch();
-        }
-
-        [RelayCommand]
         private async Task OpenFilePicker()
         {
             if (OpenFilePickerRequested != null)
             {
-                var filePath = await OpenFilePickerRequested.Invoke();
-                if (!string.IsNullOrEmpty(filePath))
+                try
                 {
-                    if (!File.Exists(filePath))
+                    var filePath = await OpenFilePickerRequested.Invoke();
+                    if (!string.IsNullOrEmpty(filePath))
                     {
-                        _logger.LogWarning("Selected keystore file does not exist: {Path}", filePath);
-                        ShowError($"Selected keystore file does not exist: {filePath}");
-                        return;
-                    }
+                        if (!File.Exists(filePath))
+                        {
+                            _logger.LogWarning("Selected keystore file does not exist: {Path}", filePath);
+                            ShowError($"Selected keystore file does not exist: {filePath}");
+                            return;
+                        }
 
-                    try
-                    {
                         // Add the keystore path to the list if not already present
                         _searchService.AddKeystorePath(filePath);
                         await _certificateService.LoadCertificatesAsync(filePath);
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error loading certificates from {Path}", filePath);
-                        ShowError($"Error loading certificates from {filePath}: {ex.Message}");
-                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to open keystore file");
+                    ShowError($"Failed to open keystore file: {ex.Message}");
                 }
             }
         }
@@ -252,6 +263,7 @@ namespace CertBox.ViewModels
         [RelayCommand]
         private void ClearError()
         {
+            _logger.LogDebug("ClearError command executed");
             _viewState.IsErrorPaneVisible = false;
             _viewState.ErrorMessage = string.Empty;
         }

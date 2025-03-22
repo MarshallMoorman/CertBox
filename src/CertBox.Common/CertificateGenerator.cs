@@ -1,11 +1,8 @@
 // src/CertBox.Common/CertificateGenerator.cs
 
-using System;
-using System.IO;
 using java.io;
 using java.security;
 using java.security.cert;
-using jdk.jfr;
 using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto.Generators;
@@ -82,9 +79,11 @@ namespace CertBox.Common
 
                 for (var i = 1; i <= 10; i++)
                 {
-                    ExportToPem(Path.Combine(outputDir, "sample_" + i + ".pem".ToString(), GenerateSelfSignedCertificate("sample_" + i.ToString(), DateTime.Now.AddDays(-365), Timespan.FromDays(720))));
+                    var cert = GenerateSelfSignedCertificate("sample_" + i,
+                        DateTime.Now.AddDays(-365),
+                        TimeSpan.FromDays(720));
+                    ExportToPem(Path.Combine(outputDir, "sample_" + i + ".pem"), cert);
                 }
-                
             }
             catch (Exception ex)
             {

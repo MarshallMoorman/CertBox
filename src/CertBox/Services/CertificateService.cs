@@ -1,6 +1,7 @@
 // src/CertBox/Services/CertificateService.cs
 
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Security.Cryptography.X509Certificates;
 using Avalonia.Threading;
 using CertBox.Common;
@@ -12,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CertBox.Services
 {
-    public class CertificateService
+    public class CertificateService : INotifyPropertyChanged
     {
         private readonly ILogger<CertificateService> _logger;
         private KeyStore _keyStore;
@@ -20,13 +21,21 @@ namespace CertBox.Services
         private string _currentPassword;
         private readonly ObservableCollection<CertificateModel> _allCertificates;
 
+        public event PropertyChangedEventHandler PropertyChanged;
+
         public CertificateService(ILogger<CertificateService> logger)
         {
             _logger = logger;
             _allCertificates = new ObservableCollection<CertificateModel>();
+            _allCertificates.CollectionChanged += (s, e) => OnPropertyChanged(nameof(AllCertificates));
         }
 
         public ObservableCollection<CertificateModel> AllCertificates => _allCertificates;
+
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
         public void LoadKeystore(string path, string password)
         {
@@ -43,10 +52,15 @@ namespace CertBox.Services
                 _currentPassword = password;
                 _logger.LogDebug("Keystore loaded successfully");
             }
+            catch (java.io.IOException ex) when (ex.Message.Contains("Invalid keystore format"))
+            {
+                _logger.LogError(ex, "Invalid keystore format for {Path}", path);
+                throw new InvalidOperationException($"The file {path} is not a valid keystore: Invalid format.", ex);
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading keystore");
-                throw;
+                _logger.LogError(ex, "Error loading keystore from {Path}", path);
+                throw new InvalidOperationException($"Failed to load keystore from {path}: {ex.Message}", ex);
             }
         }
 
@@ -168,10 +182,15 @@ namespace CertBox.Services
                 });
                 _logger.LogInformation("Certificates loaded successfully");
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "Error loading certificates from {KeystorePath}", keystorePath);
+                throw; // Let MainWindowViewModel handle the user-friendly message
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading certificates from {KeystorePath}", keystorePath);
-                throw;
+                throw new InvalidOperationException($"Failed to load certificates from {keystorePath}: {ex.Message}", ex);
             }
         }
 
