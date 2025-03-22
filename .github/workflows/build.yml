@@ -34,6 +34,12 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      - name: Debug matrix values
+        run: |
+          echo "OS: ${{ matrix.os }}"
+          echo "Runtime: ${{ matrix.runtime }}"
+          echo "Artifact Suffix: ${{ matrix.artifact-suffix }}"
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -204,12 +210,19 @@ jobs:
             ./publish/CertBox.app
           if-no-files-found: error
 
+      - name: Zip macOS .app bundle
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd ./publish
+          zip -r CertBox.app.zip CertBox.app
+          mv CertBox.app.zip ../
+
       - name: Upload macOS .app bundle as separate artifact
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
           name: CertBox-${{ matrix.artifact-suffix }}-app
-          path: ./publish/CertBox.app
+          path: ./CertBox.app.zip
           if-no-files-found: error
 
   release:
@@ -278,10 +291,6 @@ jobs:
           zip -r ../../CertBox-macos-arm64.zip .
           cd ../macos-x64
           zip -r ../../CertBox-macos-x64.zip .
-          cd ../macos-arm64-app
-          zip -r ../../CertBox-macos-arm64-app.zip .
-          cd ../macos-x64-app
-          zip -r ../../CertBox-macos-x64-app.zip .
           cd ../..
 
       - name: Create release
@@ -296,7 +305,7 @@ jobs:
             CertBox-linux-x64.zip
             CertBox-macos-arm64.zip
             CertBox-macos-x64.zip
-            CertBox-macos-arm64-app.zip
-            CertBox-macos-x64-app.zip
+            artifacts/macos-arm64-app/CertBox.app.zip
+            artifacts/macos-x64-app/CertBox.app.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
