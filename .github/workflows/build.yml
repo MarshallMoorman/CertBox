@@ -344,14 +344,14 @@ jobs:
       - name: Zip macOS .app bundle
         run: |
           cd ./publish
-          zip -r CertBox.app.zip CertBox.app
-          mv CertBox.app.zip ../
+          zip -r CertBox-${{ matrix.artifact-suffix }}.app.zip CertBox.app
+          mv CertBox-${{ matrix.artifact-suffix }}.app.zip ../
 
       - name: Upload macOS .app bundle as separate artifact
         uses: actions/upload-artifact@v4
         with:
           name: CertBox-${{ matrix.artifact-suffix }}-app
-          path: ./CertBox.app.zip
+          path: ./CertBox-${{ matrix.artifact-suffix }}.app.zip
           if-no-files-found: error
 
   build-macos-x64:
@@ -479,14 +479,14 @@ jobs:
       - name: Zip macOS .app bundle
         run: |
           cd ./publish
-          zip -r CertBox.app.zip CertBox.app
-          mv CertBox.app.zip ../
+          zip -r CertBox-${{ matrix.artifact-suffix }}.app.zip CertBox.app
+          mv CertBox-${{ matrix.artifact-suffix }}.app.zip ../
 
       - name: Upload macOS .app bundle as separate artifact
         uses: actions/upload-artifact@v4
         with:
           name: CertBox-${{ matrix.artifact-suffix }}-app
-          path: ./CertBox.app.zip
+          path: ./CertBox-${{ matrix.artifact-suffix }}.app.zip
           if-no-files-found: error
 
   release:
@@ -569,7 +569,7 @@ jobs:
             CertBox-linux-x64.zip
             CertBox-macos-arm64.zip
             CertBox-macos-x64.zip
-            artifacts/macos-arm64-app/CertBox.app.zip
-            artifacts/macos-x64-app/CertBox.app.zip
+            artifacts/macos-arm64-app/CertBox-macos-arm64.app.zip
+            artifacts/macos-x64-app/CertBox-macos-x64.app.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
