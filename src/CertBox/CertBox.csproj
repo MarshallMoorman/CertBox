@@ -12,35 +12,39 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.2.5" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.2.5" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.2.5" />
-        <PackageReference Include="Avalonia.Diagnostics" Version="11.2.5" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.5" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.5" />
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-        <PackageReference Include="IKVM" Version="8.11.2" />
-        <PackageReference Include="IKVM.Image.JDK" Version="8.11.2" />
-        <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.3" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.3" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.3" />
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.3" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
-        <PackageReference Include="Serilog" Version="4.2.0" />
-        <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.0" />
-        <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
-        <PackageReference Include="Serilog.Settings.Configuration" Version="9.0.0" />
-        <PackageReference Include="System.Text.Json" Version="9.0.0" />
+        <PackageReference Include="Avalonia" Version="11.2.5"/>
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.2.5"/>
+        <PackageReference Include="Avalonia.Desktop" Version="11.2.5"/>
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.2.5"/>
+        <PackageReference Include="Avalonia.Svg.Skia" Version="11.2.0.2"/>
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.5"/>
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.5"/>
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+        <PackageReference Include="IKVM" Version="8.11.2"/>
+        <PackageReference Include="IKVM.Image.JDK" Version="8.11.2"/>
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.3"/>
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.3"/>
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.3"/>
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.3"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3"/>
+        <PackageReference Include="Serilog" Version="4.2.0"/>
+        <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.0"/>
+        <PackageReference Include="Serilog.Sinks.File" Version="6.0.0"/>
+        <PackageReference Include="Serilog.Settings.Configuration" Version="9.0.0"/>
+        <PackageReference Include="System.Text.Json" Version="9.0.0"/>
     </ItemGroup>
 
     <ItemGroup>
-        <AvaloniaResource Include="Assets/certbox.ico" />
-        <AvaloniaResource Include="Assets\Inter-Bold.ttf" />
-        <AvaloniaResource Include="Assets\Inter-Light.ttf" />
-        <AvaloniaResource Include="Assets\Inter-Medium.ttf" />
-        <AvaloniaResource Include="Assets\Inter-Regular.ttf" />
-        <AvaloniaResource Include="Assets\Inter-SemiBold.ttf" />
-        <AvaloniaResource Include="Assets\Inter-Thin.ttf" />
+        <AvaloniaResource Include="Assets/certbox.ico"/>
+        <AvaloniaResource Include="Assets\Inter-Bold.ttf"/>
+        <AvaloniaResource Include="Assets\Inter-Light.ttf"/>
+        <AvaloniaResource Include="Assets\Inter-Medium.ttf"/>
+        <AvaloniaResource Include="Assets\Inter-Regular.ttf"/>
+        <AvaloniaResource Include="Assets\Inter-SemiBold.ttf"/>
+        <AvaloniaResource Include="Assets\Inter-Thin.ttf"/>
+        <None Remove="Assets\certbox_icon_only.svg"/>
+        <None Remove="Assets\certbox_icon_only.png"/>
+        <AvaloniaResource Include="Assets\certbox_icon_only.png"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -50,6 +54,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\CertBox.Common\CertBox.Common.csproj" />
+        <ProjectReference Include="..\CertBox.Common\CertBox.Common.csproj"/>
     </ItemGroup>
 </Project>

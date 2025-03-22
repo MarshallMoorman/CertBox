@@ -2,9 +2,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="CertBox.Views.HeaderView">
     <Border Background="{DynamicResource HeaderBackgroundColor}" Padding="10">
-        <StackPanel Orientation="Vertical">
-            <TextBlock Text="CertBox" Classes="header" HorizontalAlignment="Center" />
-            <TextBlock Text="Find and manage Java Keystore files" HorizontalAlignment="Center"></TextBlock>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <Image Grid.Column="0" HorizontalAlignment="Left" Height="100" Margin="10"
+                   Source="/Assets/certbox_icon_only.png" />
+            <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
+                <TextBlock Text="CertBox" Classes="header" HorizontalAlignment="Center" />
+                <TextBlock Text="Find and manage Java Keystore files" HorizontalAlignment="Center"></TextBlock>
+            </StackPanel>
+            <Image Grid.Column="0" HorizontalAlignment="Left" Height="100" Margin="10"
+                   Source="/Assets/certbox_icon_only.png" />
         </StackPanel>
     </Border>
 </UserControl>
