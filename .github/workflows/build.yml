@@ -17,8 +17,8 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        runtime: [win-x64]
-        artifact-suffix: [win-x64]
+        runtime: [win-x64, win-arm64]
+        artifact-suffix: [win-x64, win-arm64]
 
     steps:
       - name: Checkout repository
@@ -134,8 +134,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        runtime: [linux-x64]
-        artifact-suffix: [linux-x64]
+        runtime: [linux-x64, linux-arm64]
+        artifact-suffix: [linux-x64, linux-arm64]
 
     steps:
       - name: Checkout repository
@@ -509,17 +509,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download Windows artifact
+      - name: Download Windows x64 artifact
         uses: actions/download-artifact@v4
         with:
           name: CertBox-win-x64
           path: artifacts/win-x64
 
-      - name: Download Linux artifact
+      - name: Download Windows arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: CertBox-win-arm64
+          path: artifacts/win-arm64
+
+      - name: Download Linux x64 artifact
         uses: actions/download-artifact@v4
         with:
           name: CertBox-linux-x64
           path: artifacts/linux-x64
+
+      - name: Download Linux arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: CertBox-linux-arm64
+          path: artifacts/linux-arm64
 
       - name: Download macOS arm64 artifact
         uses: actions/download-artifact@v4
@@ -549,8 +561,12 @@ jobs:
         run: |
           cd artifacts/win-x64
           zip -r ../../CertBox-win-x64.zip .
+          cd ../win-arm64
+          zip -r ../../CertBox-win-arm64.zip .
           cd ../linux-x64
           zip -r ../../CertBox-linux-x64.zip .
+          cd ../linux-arm64
+          zip -r ../../CertBox-linux-arm64.zip .
           cd ../macos-arm64
           zip -r ../../CertBox-macos-arm64.zip .
           cd ../macos-x64
@@ -566,7 +582,9 @@ jobs:
           prerelease: false
           files: |
             CertBox-win-x64.zip
+            CertBox-win-arm64.zip
             CertBox-linux-x64.zip
+            CertBox-linux-arm64.zip
             CertBox-macos-arm64.zip
             CertBox-macos-x64.zip
             artifacts/macos-arm64-app/CertBox-macos-arm64.app.zip
