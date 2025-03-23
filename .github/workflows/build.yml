@@ -133,27 +133,9 @@ jobs:
           mkdir -p ./publish/CertBox.app/Contents/MacOS
           mkdir -p ./publish/CertBox.app/Contents/Resources
           cp -r ./publish/${{ matrix.runtime }}/* ./publish/CertBox.app/Contents/MacOS/
-          cp src/CertBox/Assets/certbox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
-          cat <<EOF > ./publish/CertBox.app/Contents/Info.plist
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CFBundleName</key>
-            <string>CertBox</string>
-            <key>CFBundleIdentifier</key>
-            <string>com.marshallmoorman.certbox</string>
-            <key>CFBundleVersion</key>
-            <string>1.0.0</string>
-            <key>CFBundleExecutable</key>
-            <string>CertBox</string>
-            <key>CFBundleIconFile</key>
-            <string>CertBox.icns</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-          </dict>
-          </plist>
-          EOF
+          cp src/CertBox/Assets/CertBox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
+          cp src/CertBox/Assets/Info.plist ./publish/CertBox.app/Contents/Info.plist
+          cp src/CertBox/Assets/CertBox.entitlements ./publish/CertBox.entitlements
 
       - name: Install Apple certificate
         env:
@@ -175,7 +157,17 @@ jobs:
         run: |
           codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
+            --entitlements ./publish/CertBox.entitlements \
+            ./publish/CertBox.app/Contents/MacOS/CertBox
+          codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+            --options runtime \
+            --entitlements ./publish/CertBox.entitlements \
             ./publish/CertBox.app
+
+      - name: Verify signature
+        run: |
+          codesign -dvv ./publish/CertBox.app
+          spctl -a -t exec -vv ./publish/CertBox.app
 
       - name: Notarize macOS .app bundle
         env:
@@ -183,31 +175,30 @@ jobs:
           APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
           APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
         run: |
-          # Create API key file
           API_KEY_PATH=$RUNNER_TEMP/AuthKey_${{ secrets.APPSTORE_CONNECT_KEY_ID }}.p8
           echo -n "$APPSTORE_CONNECT_API_KEY_BASE64" | base64 -d -o $API_KEY_PATH
-
-          # Zip the app for notarization
           cd ./publish
           zip -r CertBox-notarize.zip CertBox.app
-
-          # Submit to Apple for notarization
           xcrun notarytool submit CertBox-notarize.zip \
             --key $API_KEY_PATH \
             --key-id "${{ secrets.APPSTORE_CONNECT_KEY_ID }}" \
             --issuer "${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}" \
             --wait \
             --output-format json > notarization-result.json
-
-          # Check notarization status
-          STATUS=$(cat notarization-result.json | jq -r '.status')
+          SUBMISSION_ID=$(jq -r '.id' notarization-result.json)
+          STATUS=$(jq -r '.status' notarization-result.json)
+          echo "Notarization Submission ID: $SUBMISSION_ID"
+          echo "Notarization Status: $STATUS"
           if [ "$STATUS" != "Accepted" ]; then
-            echo "Notarization failed:"
-            cat notarization-result.json
+            echo "Notarization failed. Fetching detailed logs..."
+            xcrun notarytool log "$SUBMISSION_ID" \
+              --key $API_KEY_PATH \
+              --key-id "${{ secrets.APPSTORE_CONNECT_KEY_ID }}" \
+              --issuer "${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}" \
+              notarization-log.json
+            cat notarization-log.json
             exit 1
           fi
-
-          # Staple the notarization ticket
           xcrun stapler staple CertBox.app
 
       - name: Clean up keychain
@@ -274,27 +265,9 @@ jobs:
           mkdir -p ./publish/CertBox.app/Contents/MacOS
           mkdir -p ./publish/CertBox.app/Contents/Resources
           cp -r ./publish/${{ matrix.runtime }}/* ./publish/CertBox.app/Contents/MacOS/
-          cp src/CertBox/Assets/certbox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
-          cat <<EOF > ./publish/CertBox.app/Contents/Info.plist
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CFBundleName</key>
-            <string>CertBox</string>
-            <key>CFBundleIdentifier</key>
-            <string>com.marshallmoorman.certbox</string>
-            <key>CFBundleVersion</key>
-            <string>1.0.0</string>
-            <key>CFBundleExecutable</key>
-            <string>CertBox</string>
-            <key>CFBundleIconFile</key>
-            <string>CertBox.icns</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-          </dict>
-          </plist>
-          EOF
+          cp src/CertBox/Assets/CertBox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
+          cp src/CertBox/Assets/Info.plist ./publish/CertBox.app/Contents/Info.plist
+          cp src/CertBox/Assets/CertBox.entitlements ./publish/CertBox.entitlements
 
       - name: Install Apple certificate
         env:
@@ -316,7 +289,17 @@ jobs:
         run: |
           codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
+            --entitlements ./publish/CertBox.entitlements \
+            ./publish/CertBox.app/Contents/MacOS/CertBox
+          codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+            --options runtime \
+            --entitlements ./publish/CertBox.entitlements \
             ./publish/CertBox.app
+
+      - name: Verify signature
+        run: |
+          codesign -dvv ./publish/CertBox.app
+          spctl -a -t exec -vv ./publish/CertBox.app
 
       - name: Notarize macOS .app bundle
         env:
@@ -324,31 +307,30 @@ jobs:
           APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
           APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
         run: |
-          # Create API key file
           API_KEY_PATH=$RUNNER_TEMP/AuthKey_${{ secrets.APPSTORE_CONNECT_KEY_ID }}.p8
           echo -n "$APPSTORE_CONNECT_API_KEY_BASE64" | base64 -d -o $API_KEY_PATH
-
-          # Zip the app for notarization
           cd ./publish
           zip -r CertBox-notarize.zip CertBox.app
-
-          # Submit to Apple for notarization
           xcrun notarytool submit CertBox-notarize.zip \
             --key $API_KEY_PATH \
             --key-id "${{ secrets.APPSTORE_CONNECT_KEY_ID }}" \
             --issuer "${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}" \
             --wait \
             --output-format json > notarization-result.json
-
-          # Check notarization status
-          STATUS=$(cat notarization-result.json | jq -r '.status')
+          SUBMISSION_ID=$(jq -r '.id' notarization-result.json)
+          STATUS=$(jq -r '.status' notarization-result.json)
+          echo "Notarization Submission ID: $SUBMISSION_ID"
+          echo "Notarization Status: $STATUS"
           if [ "$STATUS" != "Accepted" ]; then
-            echo "Notarization failed:"
-            cat notarization-result.json
+            echo "Notarization failed. Fetching detailed logs..."
+            xcrun notarytool log "$SUBMISSION_ID" \
+              --key $API_KEY_PATH \
+              --key-id "${{ secrets.APPSTORE_CONNECT_KEY_ID }}" \
+              --issuer "${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}" \
+              notarization-log.json
+            cat notarization-log.json
             exit 1
           fi
-
-          # Staple the notarization ticket
           xcrun stapler staple CertBox.app
 
       - name: Clean up keychain

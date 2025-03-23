@@ -14,5 +14,7 @@
         <string>CertBox.icns</string>
         <key>CFBundlePackageType</key>
         <string>APPL</string>
+        <key>LSMinimumSystemVersion</key>
+        <string>10.15</string>
     </dict>
 </plist>
