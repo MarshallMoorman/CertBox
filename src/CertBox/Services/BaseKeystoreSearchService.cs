@@ -14,7 +14,7 @@ namespace CertBox.Services
         protected readonly IConfiguration _configuration;
         protected readonly IApplicationContext _applicationContext;
         protected readonly UserConfigService _userConfigService;
-        protected CancellationTokenSource _cts;
+        protected CancellationTokenSource _cancellationTokenSource;
         public ObservableCollection<string> KeystoreFiles { get; } = new();
 
         protected BaseKeystoreSearchService(IKeystoreFinder finder, ILogger logger, IConfiguration configuration,
@@ -26,7 +26,17 @@ namespace CertBox.Services
             _applicationContext = applicationContext;
             _userConfigService = userConfigService;
             _cachePath = _applicationContext.UserKeystoreCachePath;
-            Directory.CreateDirectory(Path.GetDirectoryName(_cachePath));
+            _cancellationTokenSource = new CancellationTokenSource();
+
+            var cacheDir = Path.GetDirectoryName(_cachePath);
+            if (cacheDir != null)
+            {
+                Directory.CreateDirectory(cacheDir);
+            }
+            else
+            {
+                _logger.LogWarning("Could not determine directory for cache path: {CachePath}", _cachePath);
+            }
         }
 
         public void AddKeystorePath(string path)
@@ -63,26 +73,33 @@ namespace CertBox.Services
             SaveCache();
         }
 
-        public void StartDeepSearch(Action onComplete = null)
+        public void StartDeepSearch(Action? onComplete = null)
         {
-            _cts = new CancellationTokenSource();
+            _cancellationTokenSource = new CancellationTokenSource();
             StartBackgroundSearch(onComplete);
             SaveCache();
         }
 
         public void StopSearch()
         {
-            _cts?.Cancel();
+            _cancellationTokenSource.Cancel();
         }
 
-        public abstract string GetJVMLibraryPath();
+        public abstract string GetJvmLibraryPath();
 
         protected virtual void LoadCache()
         {
             if (File.Exists(_cachePath))
             {
                 var json = File.ReadAllText(_cachePath);
-                var cached = JsonSerializer.Deserialize<List<string>>(json) ?? new();
+                var cached = JsonSerializer.Deserialize<List<string>>(json);
+                if (cached == null)
+                {
+                    _logger.LogWarning("Failed to deserialize keystore cache from {CachePath}; initializing empty list.",
+                        _cachePath);
+                    cached = new List<string>();
+                }
+
                 foreach (var path in cached)
                 {
                     if (File.Exists(path) && new FileInfo(path).Length > 0)
@@ -101,7 +118,7 @@ namespace CertBox.Services
             }
         }
 
-        protected abstract void StartBackgroundSearch(Action onComplete);
+        protected abstract void StartBackgroundSearch(Action? onComplete);
 
         protected void SaveCache()
         {

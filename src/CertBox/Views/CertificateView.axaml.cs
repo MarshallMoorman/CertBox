@@ -20,6 +20,12 @@ namespace CertBox.Views
         private readonly CertificateService _certificateService;
         private readonly ILogger<CertificateView> _logger;
 
+        // Parameterless constructor for Avalonia's runtime loader
+        public CertificateView()
+        {
+            throw new InvalidOperationException("CertificateView must be instantiated via dependency injection.");
+        }
+
         public CertificateView(CertificateService certificateService, ILogger<CertificateView> logger)
         {
             _certificateService = certificateService;
@@ -71,7 +77,7 @@ namespace CertBox.Views
             }
         }
 
-        private void OnCertificateListDragOver(object sender, DragEventArgs e)
+        private void OnCertificateListDragOver(object? sender, DragEventArgs e)
         {
             var certificateList = this.FindControl<DataGrid>("CertificateList");
             if (certificateList != null)
@@ -95,7 +101,7 @@ namespace CertBox.Views
             e.Handled = true;
         }
 
-        private void OnCertificateListDragLeave(object sender, DragEventArgs e)
+        private void OnCertificateListDragLeave(object? sender, DragEventArgs e)
         {
             var certificateList = this.FindControl<DataGrid>("CertificateList");
             if (certificateList != null)
@@ -106,12 +112,11 @@ namespace CertBox.Views
             }
         }
 
-        private async void OnCertificateListDrop(object sender, DragEventArgs e)
+        private async void OnCertificateListDrop(object? sender, DragEventArgs e)
         {
             var certificateList = this.FindControl<DataGrid>("CertificateList");
             if (certificateList != null)
             {
-                // Reset the border after drop
                 certificateList.BorderBrush = Brushes.Transparent;
                 certificateList.BorderThickness = new Avalonia.Thickness(0);
             }
@@ -142,7 +147,7 @@ namespace CertBox.Views
 
                         try
                         {
-                            var cert = new X509Certificate2(certPath);
+                            var cert = X509CertificateLoader.LoadCertificate(File.ReadAllBytes(certPath));
                             var alias = Path.GetFileNameWithoutExtension(certPath);
                             _certificateService.ImportCertificate(alias, cert);
                             await _certificateService.LoadCertificatesAsync(vm.SelectedFilePath);
@@ -194,7 +199,7 @@ namespace CertBox.Views
             _logger.LogDebug("Updated classes for {RowCount} DataGridRow elements", rows.Count());
         }
 
-        private T FindVisualChild<T>(Visual visual) where T : Visual
+        private T? FindVisualChild<T>(Visual visual) where T : Visual
         {
             if (visual == null) return null;
 

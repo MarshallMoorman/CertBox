@@ -5,15 +5,15 @@ using Microsoft.Extensions.Logging;
 
 namespace CertBox.Services
 {
-    public class LinuxKeystoreSearchService : BaseKeystoreSearchService
+    public class LinuxKeystoreSearchService(
+        IKeystoreFinder finder,
+        ILogger<LinuxKeystoreSearchService> logger,
+        IConfiguration configuration,
+        IApplicationContext applicationContext,
+        UserConfigService userConfigService)
+        : BaseKeystoreSearchService(finder, logger, configuration, applicationContext, userConfigService)
     {
-        public LinuxKeystoreSearchService(IKeystoreFinder finder, ILogger<LinuxKeystoreSearchService> logger,
-            IConfiguration configuration, IApplicationContext applicationContext, UserConfigService userConfigService)
-            : base(finder, logger, configuration, applicationContext, userConfigService)
-        {
-        }
-
-        public override string GetJVMLibraryPath()
+        public override string GetJvmLibraryPath()
         {
             _logger.LogDebug("Checking for user-configured JDK path: {JdkPath}", _userConfigService.Config.JdkPath);
             if (!string.IsNullOrEmpty(_userConfigService.Config.JdkPath))
@@ -25,7 +25,9 @@ namespace CertBox.Services
                     _logger.LogInformation("Found keytool at user-configured path: {Path}", keytoolPath);
                     return _userConfigService.Config.JdkPath;
                 }
-                _logger.LogWarning("User-configured JDK path {JdkPath} does not contain keytool in expected location.", _userConfigService.Config.JdkPath);
+
+                _logger.LogWarning("User-configured JDK path {JdkPath} does not contain keytool in expected location.",
+                    _userConfigService.Config.JdkPath);
             }
             else
             {
@@ -41,7 +43,7 @@ namespace CertBox.Services
                 if (File.Exists(keytoolPath))
                 {
                     _logger.LogInformation("Auto-detected JDK at: {Path}", dir);
-                    return dir;
+                    return dir; // dir is already the JDK home directory
                 }
             }
 
@@ -49,20 +51,21 @@ namespace CertBox.Services
             throw new FileNotFoundException("Could not locate keytool. Please specify a valid JDK path in settings.");
         }
 
-        protected override void StartBackgroundSearch(Action onComplete)
+        protected override void StartBackgroundSearch(Action? onComplete)
         {
             Action<string> addToCollection = file =>
             {
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    if (!_cts.IsCancellationRequested && !KeystoreFiles.Contains(file))
+                    if (!_cancellationTokenSource.IsCancellationRequested && !KeystoreFiles.Contains(file))
                     {
                         KeystoreFiles.Add(file);
                         SaveCache();
                     }
                 });
             };
-            Task.Run(() => _finder.SearchFilesystem(KeystoreFiles, addToCollection, _cts.Token, _logger), _cts.Token)
+            Task.Run(() => _finder.SearchFilesystem(KeystoreFiles, addToCollection, _cancellationTokenSource.Token, _logger),
+                    _cancellationTokenSource.Token)
                 .ContinueWith(t =>
                     {
                         if (t.IsFaulted)

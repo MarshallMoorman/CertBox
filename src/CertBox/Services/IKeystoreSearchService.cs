@@ -7,8 +7,8 @@ namespace CertBox.Services
         ObservableCollection<string> KeystoreFiles { get; }
         void AddKeystorePath(string path);
         void StartSearch();
-        void StartDeepSearch(Action onComplete = null);
+        void StartDeepSearch(Action? onComplete = null);
         void StopSearch();
-        string GetJVMLibraryPath();
+        string GetJvmLibraryPath();
     }
 }

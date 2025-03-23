@@ -6,17 +6,18 @@ namespace CertBox.Converters
     {
         public static readonly BoolToClassConverter Instance = new();
 
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
         {
-            if (value is bool isTrue && isTrue && parameter is string className)
+            if (value is bool and true && parameter is string className)
             {
                 return new[] { className };
             }
 
-            return new string[0]; // Return empty array instead of ControlsHelper.EmptyClasses
+            return Array.Empty<string>();
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        public object ConvertBack(object? value, Type targetType, object? parameter,
+            System.Globalization.CultureInfo culture)
         {
             throw new NotSupportedException();
         }

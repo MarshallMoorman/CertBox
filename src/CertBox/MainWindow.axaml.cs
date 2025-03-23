@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using CertBox.Common;
 using CertBox.Services;
 using CertBox.ViewModels;
@@ -20,7 +21,13 @@ namespace CertBox
         private readonly CertificateView _certificateView;
         private readonly DetailsPaneView _detailsPaneView;
         private readonly StatusBarView _statusBarView;
-        private Grid _certificateGrid;
+        private Grid? _certificateGrid;
+
+        // Parameterless constructor for Avalonia's runtime loader
+        public MainWindow()
+        {
+            throw new InvalidOperationException("MainWindow must be instantiated via dependency injection.");
+        }
 
         public MainWindow(MainWindowViewModel viewModel, IApplicationContext applicationContext,
             ILogger<MainWindowViewModel> logger, UserConfigService userConfigService, CertificateService certificateService,
@@ -49,23 +56,34 @@ namespace CertBox
             SetUserControl("StatusBarViewPlaceholder", _statusBarView);
 
             DataContext = viewModel;
-            viewModel.OpenFilePickerRequested += async () =>
-            {
-                return await ShowFilePickerAsync("Select Java Keystore File",
-                    new FileDialogFilter { Name = "All Files", Extensions = { "*" } },
-                    _applicationContext.DefaultKeystorePath);
-            };
-            viewModel.ImportCertificateRequested += async () =>
-            {
-                return await ShowFilePickerAsync("Select Certificate File",
-                    new FileDialogFilter
-                        { Name = "Certificate Files", Extensions = { "pem", "crt", "cer", "der" } },
-                    _applicationContext.DefaultSampleCertsPath);
-            };
+
+            viewModel.OpenFilePickerRequested += async () => await ShowFilePickerAsync(
+                "Select Java Keystore File",
+                new FilePickerFileType("All Files") { Patterns = ["*"] },
+                _applicationContext.DefaultKeystorePath);
+
+            viewModel.ImportCertificateRequested += async () => await ShowFilePickerAsync(
+                "Select Certificate File",
+                new FilePickerFileType("Certificate Files")
+                    { Patterns = ["pem", "crt", "cer", "der"] },
+                _applicationContext.DefaultSampleCertsPath);
+
             viewModel.ConfigureJdkPathRequested += async () =>
             {
-                var dialog = new OpenFolderDialog { Title = "Select JDK Home Directory" };
-                return await dialog.ShowAsync(this);
+                var topLevel = TopLevel.GetTopLevel(this);
+                if (topLevel == null)
+                {
+                    _logger.LogWarning("Could not get TopLevel for folder picker.");
+                    return string.Empty;
+                }
+
+                var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+                {
+                    Title = "Select JDK Home Directory",
+                    AllowMultiple = false
+                });
+
+                return folder.Count > 0 ? folder[0].TryGetLocalPath() ?? string.Empty : string.Empty;
             };
 
             Loaded += async (s, e) => await viewModel.InitializeAsync();
@@ -150,19 +168,26 @@ namespace CertBox
             }
         }
 
-        private async Task<string> ShowFilePickerAsync(string title, FileDialogFilter filter,
-            string initialFileName = null)
+        private async Task<string> ShowFilePickerAsync(string title, FilePickerFileType fileType,
+            string suggestedFileName = "")
+
         {
-            var dialog = new OpenFileDialog
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel == null)
+            {
+                _logger.LogWarning("Could not get TopLevel for file picker.");
+                return string.Empty;
+            }
+
+            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = title,
-                Filters = new() { filter },
                 AllowMultiple = false,
-                InitialFileName = initialFileName
-            };
+                FileTypeFilter = [fileType],
+                SuggestedFileName = suggestedFileName
+            });
 
-            var result = await dialog.ShowAsync(this);
-            return result != null && result.Length > 0 ? result[0] : null;
+            return files.Count > 0 ? files[0].TryGetLocalPath() ?? string.Empty : string.Empty;
         }
 
         private bool IsDescendantOf(Control control, Control ancestor)

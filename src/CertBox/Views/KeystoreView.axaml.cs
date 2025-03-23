@@ -1,5 +1,3 @@
-// src/CertBox/Views/KeystoreView.axaml.cs
-
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
@@ -14,6 +12,12 @@ namespace CertBox.Views
         private readonly CertificateService _certificateService;
         private readonly IKeystoreSearchService _searchService;
         private readonly ILogger<KeystoreView> _logger;
+
+        // Parameterless constructor for Avalonia's runtime loader
+        public KeystoreView()
+        {
+            throw new InvalidOperationException("KeystoreView must be instantiated via dependency injection.");
+        }
 
         public KeystoreView(CertificateService certificateService, IKeystoreSearchService searchService,
             ILogger<KeystoreView> logger)
@@ -65,7 +69,7 @@ namespace CertBox.Views
             }
         }
 
-        private void OnKeystoreListDragOver(object sender, DragEventArgs e)
+        private void OnKeystoreListDragOver(object? sender, DragEventArgs e)
         {
             var keystoreList = this.FindControl<ListBox>("KeystoreList");
             if (keystoreList != null)
@@ -89,7 +93,7 @@ namespace CertBox.Views
             e.Handled = true;
         }
 
-        private void OnKeystoreListDragLeave(object sender, DragEventArgs e)
+        private void OnKeystoreListDragLeave(object? sender, DragEventArgs e)
         {
             var keystoreList = this.FindControl<ListBox>("KeystoreList");
             if (keystoreList != null)
@@ -100,7 +104,7 @@ namespace CertBox.Views
             }
         }
 
-        private async void OnKeystoreListDrop(object sender, DragEventArgs e)
+        private async void OnKeystoreListDrop(object? sender, DragEventArgs e)
         {
             var keystoreList = this.FindControl<ListBox>("KeystoreList");
             if (keystoreList != null)

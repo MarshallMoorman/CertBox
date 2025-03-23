@@ -16,10 +16,10 @@ namespace CertBox.Services
         private readonly ILogger<CertificateService> _logger;
         private readonly IKeystoreSearchService _keystoreSearchService;
         private readonly ObservableCollection<CertificateModel> _allCertificates;
-        private string _currentPath;
-        private string _currentPassword;
+        private string? _currentPath;
+        private string? _currentPassword;
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         public CertificateService(ILogger<CertificateService> logger, IKeystoreSearchService keystoreSearchService)
         {
@@ -38,7 +38,7 @@ namespace CertBox.Services
 
         private string GetKeytoolPath()
         {
-            string jdkPath = _keystoreSearchService.GetJVMLibraryPath();
+            string jdkPath = _keystoreSearchService.GetJvmLibraryPath();
             string keytoolPath = Path.Combine(jdkPath, "bin", "keytool");
             if (OperatingSystem.IsWindows())
                 keytoolPath += ".exe";
@@ -127,18 +127,16 @@ namespace CertBox.Services
             {
                 if (!block.Contains("-----BEGIN CERTIFICATE-----")) continue;
 
-                // Extract alias
                 var aliasMatch = Regex.Match(block, @"Alias name: (.+)");
                 if (!aliasMatch.Success) continue;
 
                 var alias = aliasMatch.Groups[1].Value.Trim();
 
-                // Extract certificate details by parsing the PEM block
                 var pemStart = block.IndexOf("-----BEGIN CERTIFICATE-----");
                 var pemEnd = block.Length;
                 var pemBlock = block.Substring(pemStart, pemEnd - pemStart).Trim();
                 var certBytes = ConvertPemToBytes(pemBlock);
-                var x509Cert = new X509Certificate2(certBytes);
+                var x509Cert = X509CertificateLoader.LoadCertificate(certBytes);
 
                 certificates.Add(new CertificateModel
                 {

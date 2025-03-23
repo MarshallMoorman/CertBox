@@ -16,7 +16,7 @@ namespace CertBox
     class Program
     {
         private static IServiceProvider? _serviceProvider;
-        private static ApplicationContext _applicationContext;
+        private static ApplicationContext _applicationContext = null!;
 
         [STAThread]
         public static void Main(string[] args)
@@ -48,7 +48,7 @@ namespace CertBox
 
         private static void DebugResources()
         {
-            var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
+            var logger = _serviceProvider!.GetRequiredService<ILogger<Program>>();
             logger.LogDebug("Debugging embedded resources...");
 
             var assembly = Assembly.GetExecutingAssembly();
@@ -74,7 +74,10 @@ namespace CertBox
             if (logPathSection != null)
             {
                 var logPath = logPathSection.Value?.ToString();
-                logPathSection.Value = Path.GetFullPath(Path.Combine(baseDir, logPath));
+                if (logPath != null)
+                {
+                    logPathSection.Value = Path.GetFullPath(Path.Combine(baseDir, logPath));
+                }
             }
 
             var levelSwitch = new LoggingLevelSwitch();
@@ -176,7 +179,7 @@ namespace CertBox
                 provider.GetRequiredService<IKeystoreSearchService>()
             ));
             services.AddSingleton<IThemeManager>(provider => new ThemeManager(
-                Application.Current,
+                Application.Current!,
                 provider.GetRequiredService<UserConfigService>()
             ));
             services.AddSingleton<UserConfigService>();
@@ -195,11 +198,11 @@ namespace CertBox
             logger.LogDebug("Application starting...");
         }
 
-        public static IServiceProvider ServiceProvider => _serviceProvider
+        public static IServiceProvider ServiceProvider => _serviceProvider!
                                                           ?? throw new InvalidOperationException(
                                                               "Service provider not initialized.");
 
-        private static IConfigurationSection FindLogPathSection(IConfigurationRoot configuration)
+        private static IConfigurationSection? FindLogPathSection(IConfigurationRoot configuration)
         {
             var writeToSection = configuration.GetSection("Serilog:WriteTo");
             if (writeToSection == null || !writeToSection.Exists())

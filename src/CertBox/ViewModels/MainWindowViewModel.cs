@@ -35,7 +35,7 @@ namespace CertBox.ViewModels
 
         [NotifyCanExecuteChangedFor(nameof(RemoveCommand))]
         [ObservableProperty]
-        private CertificateModel _selectedCertificate;
+        private CertificateModel? _selectedCertificate;
 
         public string ErrorMessage
         {
@@ -55,7 +55,7 @@ namespace CertBox.ViewModels
             set => _viewState.IsDeepSearchRunning = value;
         }
 
-        private string DefaultKeystorePath;
+        private string? DefaultKeystorePath;
 
         public MainWindowViewModel(
             ILogger<MainWindowViewModel> logger,
@@ -103,7 +103,7 @@ namespace CertBox.ViewModels
             // Check for a valid JDK path at startup
             try
             {
-                _searchService.GetJVMLibraryPath();
+                _searchService.GetJvmLibraryPath();
             }
             catch (FileNotFoundException ex)
             {
@@ -227,7 +227,7 @@ namespace CertBox.ViewModels
             _deepSearchService.CancelDeepSearch();
         }
 
-        public event Func<Task<string>> OpenFilePickerRequested;
+        public event Func<Task<string>>? OpenFilePickerRequested;
 
         [RelayCommand(CanExecute = nameof(CanImport))]
         private async Task Import()
@@ -253,7 +253,7 @@ namespace CertBox.ViewModels
                             return;
                         }
 
-                        var cert = new X509Certificate2(certPath);
+                        var cert = X509CertificateLoader.LoadCertificate(File.ReadAllBytes(certPath));
                         var alias = Path.GetFileNameWithoutExtension(certPath);
                         _certificateService.ImportCertificate(alias, cert);
                         await _certificateService.LoadCertificatesAsync(SelectedFilePath);
@@ -295,7 +295,7 @@ namespace CertBox.ViewModels
         [RelayCommand(CanExecute = nameof(CanRemove))]
         private async Task Remove()
         {
-            if (_selectedCertificate == null)
+            if (SelectedCertificate == null)
             {
                 _logger.LogWarning("No certificate selected for removal");
                 ShowError("No certificate selected for removal.");
@@ -304,7 +304,7 @@ namespace CertBox.ViewModels
 
             try
             {
-                var alias = _selectedCertificate.Alias;
+                var alias = SelectedCertificate.Alias;
                 _certificateService.RemoveCertificate(alias);
                 await _certificateService.LoadCertificatesAsync(SelectedFilePath);
                 _logger.LogInformation("Removed certificate with alias: {Alias}", alias);
@@ -319,7 +319,7 @@ namespace CertBox.ViewModels
 
         private bool CanRemove()
         {
-            return _selectedCertificate != null;
+            return SelectedCertificate != null;
         }
 
         [RelayCommand]
@@ -370,8 +370,8 @@ namespace CertBox.ViewModels
             }
         }
 
-        public event Func<Task<string>> ImportCertificateRequested;
-        public event Func<Task<string>> ConfigureJdkPathRequested;
+        public event Func<Task<string>>? ImportCertificateRequested;
+        public event Func<Task<string>>? ConfigureJdkPathRequested;
 
         public void ShowError(string message)
         {

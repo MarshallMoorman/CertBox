@@ -12,14 +12,14 @@ namespace CertBox.TestGenerator
 {
     internal class Program
     {
-        private static ApplicationContext _applicationContext;
         private static IServiceProvider? _serviceProvider;
+        private static ApplicationContext _applicationContext = null!;
 
         static void Main(string[] args)
         {
             _applicationContext = new ApplicationContext(AppDomain.CurrentDomain.BaseDirectory, 5);
             ConfigureServices();
-            var generator = _serviceProvider.GetRequiredService<CertificateGenerator>();
+            var generator = _serviceProvider!.GetRequiredService<CertificateGenerator>();
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             var outputPath = _applicationContext.DefaultKeystorePath;
             var sampleDir = _applicationContext.DefaultSampleCertsPath;
@@ -29,7 +29,7 @@ namespace CertBox.TestGenerator
             {
                 // Ensure the output directory exists
                 var outputDir = Path.GetDirectoryName(outputPath);
-                if (!Directory.Exists(outputDir))
+                if (outputDir != null && !Directory.Exists(outputDir))
                 {
                     Directory.CreateDirectory(outputDir);
                 }
@@ -40,17 +40,17 @@ namespace CertBox.TestGenerator
                 }
 
                 generator.GenerateTestKeystore(outputPath, password);
-                _serviceProvider.GetRequiredService<ILogger<Program>>()
+                _serviceProvider!.GetRequiredService<ILogger<Program>>()
                     .LogInformation("Test keystore file generated at: {OutputPath}", outputPath);
 
                 // Generate sample certificates
                 generator.GenerateSampleCertificates(sampleDir);
-                _serviceProvider.GetRequiredService<ILogger<Program>>()
+                _serviceProvider!.GetRequiredService<ILogger<Program>>()
                     .LogInformation("Sample certificates generated in: {SampleDir}", sampleDir);
             }
             catch (Exception ex)
             {
-                _serviceProvider.GetRequiredService<ILogger<Program>>().LogError(ex,
+                _serviceProvider!.GetRequiredService<ILogger<Program>>().LogError(ex,
                     "Error generating test keystore file or sample certificates");
             }
         }
@@ -70,8 +70,12 @@ namespace CertBox.TestGenerator
             var logPathSection = FindLogPathSection(configuration);
             if (logPathSection != null)
             {
-                var logPath = logPathSection.Value?.ToString();
-                logPathSection.Value = Path.GetFullPath(Path.Combine(baseDir, logPath));
+                var logPath = logPathSection.Value;
+
+                if (logPath != null)
+                {
+                    logPathSection.Value = Path.GetFullPath(Path.Combine(baseDir, logPath));
+                }
             }
 
             var levelSwitch = new LoggingLevelSwitch();
@@ -99,7 +103,7 @@ namespace CertBox.TestGenerator
             _serviceProvider = services.BuildServiceProvider();
         }
 
-        private static IConfigurationSection FindLogPathSection(IConfigurationRoot configuration)
+        private static IConfigurationSection? FindLogPathSection(IConfigurationRoot configuration)
         {
             var writeToSection = configuration.GetSection("Serilog:WriteTo");
             if (writeToSection == null || !writeToSection.Exists())

@@ -9,23 +9,29 @@ namespace CertBox.Services
     {
         private readonly string _configPath;
         private readonly ILogger<UserConfigService> _logger;
-        private readonly IApplicationContext _applicationContext;
-        private UserConfig _config;
+        private UserConfig _config = null!;
 
         public UserConfigService(ILogger<UserConfigService> logger, IApplicationContext applicationContext)
         {
             _logger = logger;
-            _applicationContext = applicationContext;
-            _configPath = _applicationContext.UserConfigPath;
+            _configPath = applicationContext.UserConfigPath;
+
             var configDir = Path.GetDirectoryName(_configPath);
-            Directory.CreateDirectory(configDir);
+            if (configDir != null)
+            {
+                Directory.CreateDirectory(configDir);
+            }
+            else
+            {
+                _logger.LogWarning("Could not determine directory for config path: {ConfigPath}", _configPath);
+            }
 
             // On Windows, set the Hidden attribute for the .certbox directory
             if (OperatingSystem.IsWindows())
             {
                 try
                 {
-                    var dirInfo = new DirectoryInfo(configDir);
+                    var dirInfo = new DirectoryInfo(configDir!);
                     if (!dirInfo.Attributes.HasFlag(FileAttributes.Hidden))
                     {
                         dirInfo.Attributes |= FileAttributes.Hidden;
