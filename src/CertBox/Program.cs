@@ -1,5 +1,3 @@
-// src/CertBox/Program.cs
-
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Avalonia;
@@ -26,8 +24,33 @@ namespace CertBox
             _applicationContext = new ApplicationContext(AppDomain.CurrentDomain.BaseDirectory, 6);
             ConfigureServices();
             DebugResources();
-            BuildAvaloniaApp()
-                .StartWithClassicDesktopLifetime(args);
+
+            try
+            {
+                var keystoreSearchService = _serviceProvider.GetService<IKeystoreSearchService>();
+                try
+                {
+                    var jvmPath = keystoreSearchService.GetJVMLibraryPath();
+                    BaseKeystoreSearchService.SetJVMLibraryPath(jvmPath);
+                }
+                catch (FileNotFoundException ex)
+                {
+                    var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
+                    logger.LogWarning(ex, "No JDK found at startup. User must configure a JDK path via settings.");
+                }
+
+                BuildAvaloniaApp()
+                    .StartWithClassicDesktopLifetime(args);
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Application failed to start.");
+                throw;
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
 
         public static AppBuilder BuildAvaloniaApp()
@@ -53,14 +76,12 @@ namespace CertBox
         {
             var services = new ServiceCollection();
 
-            // Configuration
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(baseDir)
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .Build();
 
-            // Logging
             var logPathSection = FindLogPathSection(configuration);
             if (logPathSection != null)
             {
@@ -101,24 +122,27 @@ namespace CertBox
                 var finder = provider.GetRequiredService<IKeystoreFinder>();
                 var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
                 var configuration = provider.GetRequiredService<IConfiguration>();
+                var userconfiguration = provider.GetRequiredService<UserConfigService>();
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     return new WindowsKeystoreSearchService(finder,
                         loggerFactory.CreateLogger<WindowsKeystoreSearchService>(),
                         configuration,
-                        _applicationContext);
+                        _applicationContext,
+                        userconfiguration);
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                     return new MacOsKeystoreSearchService(finder,
                         loggerFactory.CreateLogger<MacOsKeystoreSearchService>(),
                         configuration,
-                        _applicationContext);
+                        _applicationContext,
+                        userconfiguration);
 
                 return new LinuxKeystoreSearchService(finder,
                     loggerFactory.CreateLogger<LinuxKeystoreSearchService>(),
                     configuration,
-                    _applicationContext);
+                    _applicationContext,
+                    userconfiguration);
             });
 
-            // Register services
             services.AddSingleton<IConfiguration>(configuration);
             services.AddSingleton<IApplicationContext>(_applicationContext);
             services.AddSingleton<ViewState>();
@@ -159,7 +183,10 @@ namespace CertBox
             services.AddTransient<ErrorPaneView>();
             services.AddTransient<DetailsPaneView>();
             services.AddTransient<StatusBarView>();
-            services.AddSingleton<CertificateService>();
+            services.AddSingleton<CertificateService>(provider => new CertificateService(
+                provider.GetRequiredService<ILogger<CertificateService>>(),
+                provider.GetRequiredService<IKeystoreSearchService>()
+            ));
             services.AddSingleton<IThemeManager>(provider => new ThemeManager(
                 Application.Current,
                 provider.GetRequiredService<UserConfigService>()

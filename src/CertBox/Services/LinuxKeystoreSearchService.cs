@@ -8,9 +8,27 @@ namespace CertBox.Services
     public class LinuxKeystoreSearchService : BaseKeystoreSearchService
     {
         public LinuxKeystoreSearchService(IKeystoreFinder finder, ILogger<LinuxKeystoreSearchService> logger,
-            IConfiguration configuration, IApplicationContext applicationContext)
-            : base(finder, logger, configuration, applicationContext)
+            IConfiguration configuration, IApplicationContext applicationContext, UserConfigService userConfigService)
+            : base(finder, logger, configuration, applicationContext, userConfigService)
         {
+        }
+
+        public override string GetJVMLibraryPath()
+        {
+            if (!string.IsNullOrEmpty(_userConfigService.Config.JdkPath) &&
+                File.Exists(Path.Combine(_userConfigService.Config.JdkPath, "lib/libjvm.so")))
+            {
+                return Path.Combine(_userConfigService.Config.JdkPath, "lib");
+            }
+
+            foreach (var dir in Directory.EnumerateDirectories("/usr/lib/jvm", "*", SearchOption.TopDirectoryOnly))
+            {
+                var jvmPath = Path.Combine(dir, "lib/libjvm.so");
+                if (File.Exists(jvmPath))
+                    return Path.GetDirectoryName(jvmPath);
+            }
+
+            throw new FileNotFoundException("Could not locate libjvm.so. Please specify a valid JDK path in settings.");
         }
 
         protected override void StartBackgroundSearch(Action onComplete)

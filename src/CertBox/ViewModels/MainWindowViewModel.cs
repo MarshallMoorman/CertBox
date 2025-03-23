@@ -313,7 +313,40 @@ namespace CertBox.ViewModels
             _themeManager.ToggleTheme();
         }
 
+        [RelayCommand]
+        private async Task ConfigureJdkPath()
+        {
+            if (ConfigureJdkPathRequested != null)
+            {
+                var result = await ConfigureJdkPathRequested.Invoke();
+
+                if (!string.IsNullOrEmpty(result))
+                {
+                    try
+                    {
+                        _userConfigService.UpdateJdkPath(result);
+                        var jvmPath = _searchService.GetJVMLibraryPath();
+                        BaseKeystoreSearchService.SetJVMLibraryPath(jvmPath);
+                        _logger.LogInformation("JDK path configured successfully: {Path}", result);
+
+                        _searchService.StartSearch();
+                        if (!string.IsNullOrEmpty(SelectedFilePath))
+                        {
+                            await _certificateService.LoadCertificatesAsync(SelectedFilePath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Invalid JDK path: {Path}", result);
+                        ShowError($"Invalid JDK path: {ex.Message}");
+                        return;
+                    }
+                }
+            }
+        }
+
         public event Func<Task<string>> ImportCertificateRequested;
+        public event Func<Task<string>> ConfigureJdkPathRequested;
 
         public void ShowError(string message)
         {

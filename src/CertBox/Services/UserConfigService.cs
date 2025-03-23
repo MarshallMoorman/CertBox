@@ -60,5 +60,11 @@ namespace CertBox.Services
                 _logger.LogError(ex, "Failed to save user config to {ConfigPath}", _configPath);
             }
         }
+
+        public void UpdateJdkPath(string jdkPath)
+        {
+            Config.JdkPath = jdkPath;
+            SaveConfig();
+        }
     }
 }

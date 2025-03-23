@@ -2,15 +2,27 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="CertBox.Views.HeaderView">
     <Border Background="{DynamicResource HeaderBackgroundColor}" Padding="10">
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-            <Image Grid.Column="0" HorizontalAlignment="Left" Height="100" Margin="10"
-                   Source="/Assets/certbox_icon_only.png" />
-            <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
-                <TextBlock Text="CertBox" Classes="header" HorizontalAlignment="Center" />
-                <TextBlock Text="Find and manage Java Keystore files" HorizontalAlignment="Center"></TextBlock>
+        <Grid ColumnDefinitions="1*,3*,1*">
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                <Image Grid.Column="0" HorizontalAlignment="Left" Height="100" Margin="10"
+                       Source="/Assets/certbox_icon_only.png" />
+                <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
+                    <TextBlock Text="CertBox" Classes="header" HorizontalAlignment="Center" />
+                    <TextBlock Text="Find and manage Java Keystore files" HorizontalAlignment="Center"></TextBlock>
+                </StackPanel>
+                <Image Grid.Column="0" HorizontalAlignment="Left" Height="100" Margin="10"
+                       Source="/Assets/certbox_icon_only.png" />
             </StackPanel>
-            <Image Grid.Column="0" HorizontalAlignment="Left" Height="100" Margin="10"
-                   Source="/Assets/certbox_icon_only.png" />
-        </StackPanel>
+
+            <Button Grid.Column="2"
+                    Command="{Binding ConfigureJdkPathCommand}"
+                    Margin="0,0,10,0"
+                    Width="32"
+                    Height="32"
+                    ToolTip.Tip="Configure JDK Path" VerticalAlignment="Top" HorizontalAlignment="Right">
+                <PathIcon Data="{StaticResource Icon.Gear}" Width="16" Height="16"
+                          Foreground="{DynamicResource ForegroundColor}" />
+            </Button>
+        </Grid>
     </Border>
 </UserControl>

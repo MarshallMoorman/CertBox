@@ -13,16 +13,18 @@ namespace CertBox.Services
         protected readonly string _cachePath;
         protected readonly IConfiguration _configuration;
         protected readonly IApplicationContext _applicationContext;
+        protected readonly UserConfigService _userConfigService;
         protected CancellationTokenSource _cts;
         public ObservableCollection<string> KeystoreFiles { get; } = new();
 
         protected BaseKeystoreSearchService(IKeystoreFinder finder, ILogger logger, IConfiguration configuration,
-            IApplicationContext applicationContext)
+            IApplicationContext applicationContext, UserConfigService userConfigService)
         {
             _finder = finder;
             _logger = logger;
             _configuration = configuration;
             _applicationContext = applicationContext;
+            _userConfigService = userConfigService;
             _cachePath = _applicationContext.UserKeystoreCachePath;
             Directory.CreateDirectory(Path.GetDirectoryName(_cachePath));
         }
@@ -72,6 +74,16 @@ namespace CertBox.Services
         public void StopSearch()
         {
             _cts?.Cancel();
+        }
+
+        public abstract string GetJVMLibraryPath();
+
+        public static void SetJVMLibraryPath(string jvmPath)
+        {
+            var currentPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            Environment.SetEnvironmentVariable("PATH", $"{jvmPath}{Path.PathSeparator}{currentPath}");
+            // IKVM uses java.library.path to locate libjvm
+            java.lang.System.setProperty("java.library.path", jvmPath);
         }
 
         protected virtual void LoadCache()

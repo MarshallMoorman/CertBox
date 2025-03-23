@@ -62,6 +62,12 @@ namespace CertBox
                         { Name = "Certificate Files", Extensions = { "pem", "crt", "cer", "der" } },
                     _applicationContext.DefaultSampleCertsPath);
             };
+            viewModel.ConfigureJdkPathRequested += async () =>
+            {
+                var dialog = new OpenFolderDialog { Title = "Select JDK Home Directory" };
+                return await dialog.ShowAsync(this);
+            };
+
             Loaded += async (s, e) => await viewModel.InitializeAsync();
 
             // Load window size from user config

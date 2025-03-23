@@ -32,105 +32,28 @@ jobs:
         with:
           dotnet-version: '9.0.100'
 
-      - name: Log disk usage (initial)
-        run: dir
-
-      - name: Clear NuGet cache (initial)
-        run: dotnet nuget locals all --clear
-
-      - name: Log disk usage (after initial cleanup)
-        run: dir
-
       - name: Restore dependencies
         run: dotnet restore CertBox.sln
 
       - name: Build solution
         run: dotnet build CertBox.sln --configuration Release --no-restore
 
-      - name: Log disk usage (after build)
-        run: dir
-
-      - name: Clear NuGet cache with retry (post-build)
-        run: |
-          for attempt in {1..3}; do
-            echo "Attempt $attempt to clear NuGet cache..."
-            dotnet nuget locals all --clear && break
-            if [ $attempt -lt 3 ]; then
-              echo "Failed to clear NuGet cache, retrying in 5 seconds..."
-              sleep 5
-            else
-              echo "Failed to clear NuGet cache after 3 attempts, proceeding anyway."
-            fi
-          done
-        continue-on-error: true
-
-      - name: Clean obj directories (Windows)
-        shell: powershell
-        run: |
-          Get-ChildItem -Path . -Recurse -Directory -Filter 'obj' -ErrorAction SilentlyContinue | ForEach-Object { 
-            try { 
-              Write-Host 'Deleting directory: ' $_.FullName
-              Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction Stop 
-            } catch { 
-              Write-Host 'Failed to delete directory ' $_.FullName ': ' $_.Exception.Message 
-            }
-          }
-
-      - name: Log disk usage (after cleanup)
-        run: dir
-
       - name: Run tests
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
-
-      - name: Log disk usage (after tests)
-        run: dir
-
-      - name: Clean up unnecessary IKVM runtimes (Windows)
-        shell: powershell
-        run: |
-          Get-ChildItem -Path './src/CertBox/bin' -Recurse -Directory -Filter 'ikvm' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notlike '*Release/net9.0/ikvm/runtimes/${{ matrix.runtime }}*' -and $_.FullName -notlike '*Release/net9.0/ikvm' } | ForEach-Object { 
-            try { 
-              Write-Host 'Deleting directory: ' $_.FullName
-              Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction Stop 
-            } catch { 
-              Write-Host 'Failed to delete directory ' $_.FullName ': ' $_.Exception.Message 
-            }
-          }
-
-      - name: Clean up runtimes folders (Windows)
-        shell: powershell
-        run: |
-          Get-ChildItem -Path './src/CertBox.TestGenerator/bin' -Recurse -Directory -Filter 'runtimes' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notlike '*Release/net9.0/runtimes/${{ matrix.runtime }}*' } | ForEach-Object { 
-            try { 
-              Write-Host 'Deleting directory: ' $_.FullName
-              Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction Stop 
-            } catch { 
-              Write-Host 'Failed to delete directory ' $_.FullName ': ' $_.Exception.Message 
-            }
-          }
-          Get-ChildItem -Path './tests/CertBox.Tests/bin' -Recurse -Directory -Filter 'runtimes' -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notlike '*Release/net9.0/runtimes/${{ matrix.runtime }}*' } | ForEach-Object { 
-            try { 
-              Write-Host 'Deleting directory: ' $_.FullName
-              Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction Stop 
-            } catch { 
-              Write-Host 'Failed to delete directory ' $_.FullName ': ' $_.Exception.Message 
-            }
-          }
-
-      - name: Log disk usage (after cleanup)
-        run: dir
 
       - name: Publish CertBox (with trimming disabled)
         run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=None -o ./publish/${{ matrix.runtime }}
 
-      - name: Log disk usage (after publish)
-        run: dir
+      - name: Zip artifact
+        shell: powershell
+        run: |
+          Compress-Archive -Path ./publish/${{ matrix.runtime }}/* -DestinationPath ./CertBox-${{ matrix.artifact-suffix }}.zip
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: CertBox-${{ matrix.artifact-suffix }}
-          path: ./publish/${{ matrix.runtime }}/*
+          path: ./CertBox-${{ matrix.artifact-suffix }}.zip
           if-no-files-found: error
 
   build-linux:
@@ -152,77 +75,29 @@ jobs:
         with:
           dotnet-version: '9.0.100'
 
-      - name: Log disk usage (initial)
-        run: df -h
-
-      - name: Clear NuGet cache (initial)
-        run: dotnet nuget locals all --clear
-
-      - name: Log disk usage (after initial cleanup)
-        run: df -h
-
       - name: Restore dependencies
         run: dotnet restore CertBox.sln
 
       - name: Build solution
         run: dotnet build CertBox.sln --configuration Release --no-restore
 
-      - name: Log disk usage (after build)
-        run: df -h
-
-      - name: Clear NuGet cache with retry (post-build)
-        run: |
-          for attempt in {1..3}; do
-            echo "Attempt $attempt to clear NuGet cache..."
-            dotnet nuget locals all --clear && break
-            if [ $attempt -lt 3 ]; then
-              echo "Failed to clear NuGet cache, retrying in 5 seconds..."
-              sleep 5
-            else
-              echo "Failed to clear NuGet cache after 3 attempts, proceeding anyway."
-            fi
-          done
-        continue-on-error: true
-
-      - name: Clean obj directories (Linux)
-        run: find . -type d -name "obj" -exec rm -rf {} + || true
-
-      - name: Log disk usage (after cleanup)
-        run: df -h
-
       - name: Run tests
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
-
-      - name: Log disk usage (after tests)
-        run: df -h
-
-      - name: Clean up unnecessary IKVM runtimes (Linux)
-        run: |
-          echo "Checking IKVM runtimes in CertBox..."
-          find ./src/CertBox/bin -type d -path "*/Release/net9.0/ikvm/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
-          find ./src/CertBox/bin -type d -path "*/Release/net9.0/ikvm/*" -not -path "*/Release/net9.0/ikvm/runtimes/${{ matrix.runtime }}" -not -path "*/Release/net9.0/ikvm" -exec rm -rf {} + || true
-
-      - name: Clean up runtimes folders (Linux)
-        run: |
-          echo "Checking runtimes in CertBox.TestGenerator..."
-          find ./src/CertBox.TestGenerator/bin -type d -path "*/Release/net9.0/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
-          echo "Checking runtimes in CertBox.Tests..."
-          find ./tests/CertBox.Tests/bin -type d -path "*/Release/net9.0/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
-
-      - name: Log disk usage (after cleanup)
-        run: df -h
 
       - name: Publish CertBox (with trimming disabled)
         run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=None -o ./publish/${{ matrix.runtime }}
 
-      - name: Log disk usage (after publish)
-        run: df -h
+      - name: Zip artifact
+        run: |
+          cd ./publish/${{ matrix.runtime }}
+          zip -r ../../CertBox-${{ matrix.artifact-suffix }}.zip .
+          cd ../..
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: CertBox-${{ matrix.artifact-suffix }}
-          path: ./publish/${{ matrix.runtime }}/*
+          path: ./CertBox-${{ matrix.artifact-suffix }}.zip
           if-no-files-found: error
 
   build-macos-arm64:
@@ -241,71 +116,17 @@ jobs:
         with:
           dotnet-version: '9.0.100'
 
-      - name: Log disk usage (initial)
-        run: df -h
-
-      - name: Clear NuGet cache (initial)
-        run: dotnet nuget locals all --clear
-
-      - name: Log disk usage (after initial cleanup)
-        run: df -h
-
       - name: Restore dependencies
         run: dotnet restore CertBox.sln
 
       - name: Build solution
         run: dotnet build CertBox.sln --configuration Release --no-restore
 
-      - name: Log disk usage (after build)
-        run: df -h
-
-      - name: Clear NuGet cache with retry (post-build)
-        run: |
-          for attempt in {1..3}; do
-            echo "Attempt $attempt to clear NuGet cache..."
-            dotnet nuget locals all --clear && break
-            if [ $attempt -lt 3 ]; then
-              echo "Failed to clear NuGet cache, retrying in 5 seconds..."
-              sleep 5
-            else
-              echo "Failed to clear NuGet cache after 3 attempts, proceeding anyway."
-            fi
-          done
-        continue-on-error: true
-
-      - name: Clean obj directories (macOS)
-        run: find . -type d -name "obj" -exec rm -rf {} + || true
-
-      - name: Log disk usage (after cleanup)
-        run: df -h
-
       - name: Run tests
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
 
-      - name: Log disk usage (after tests)
-        run: df -h
-
-      - name: Clean up unnecessary IKVM runtimes (macOS)
-        run: |
-          echo "Checking IKVM runtimes in CertBox..."
-          find ./src/CertBox/bin -type d -path "*/Release/net9.0/ikvm/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
-          find ./src/CertBox/bin -type d -path "*/Release/net9.0/ikvm/*" -not -path "*/Release/net9.0/ikvm/runtimes/${{ matrix.runtime }}" -not -path "*/Release/net9.0/ikvm" -exec rm -rf {} + || true
-
-      - name: Clean up runtimes folders (macOS)
-        run: |
-          echo "Checking runtimes in CertBox.TestGenerator..."
-          find ./src/CertBox.TestGenerator/bin -type d -path "*/Release/net9.0/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
-          echo "Checking runtimes in CertBox.Tests..."
-          find ./tests/CertBox.Tests/bin -type d -path "*/Release/net9.0/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
-
-      - name: Log disk usage (after cleanup)
-        run: df -h
-
       - name: Publish CertBox (with trimming disabled)
         run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=None -o ./publish/${{ matrix.runtime }}
-
-      - name: Log disk usage (after publish)
-        run: df -h
 
       - name: Create macOS .app bundle
         run: |
@@ -376,71 +197,17 @@ jobs:
         with:
           dotnet-version: '9.0.100'
 
-      - name: Log disk usage (initial)
-        run: df -h
-
-      - name: Clear NuGet cache (initial)
-        run: dotnet nuget locals all --clear
-
-      - name: Log disk usage (after initial cleanup)
-        run: df -h
-
       - name: Restore dependencies
         run: dotnet restore CertBox.sln
 
       - name: Build solution
         run: dotnet build CertBox.sln --configuration Release --no-restore
 
-      - name: Log disk usage (after build)
-        run: df -h
-
-      - name: Clear NuGet cache with retry (post-build)
-        run: |
-          for attempt in {1..3}; do
-            echo "Attempt $attempt to clear NuGet cache..."
-            dotnet nuget locals all --clear && break
-            if [ $attempt -lt 3 ]; then
-              echo "Failed to clear NuGet cache, retrying in 5 seconds..."
-              sleep 5
-            else
-              echo "Failed to clear NuGet cache after 3 attempts, proceeding anyway."
-            fi
-          done
-        continue-on-error: true
-
-      - name: Clean obj directories (macOS)
-        run: find . -type d -name "obj" -exec rm -rf {} + || true
-
-      - name: Log disk usage (after cleanup)
-        run: df -h
-
       - name: Run tests
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
 
-      - name: Log disk usage (after tests)
-        run: df -h
-
-      - name: Clean up unnecessary IKVM runtimes (macOS)
-        run: |
-          echo "Checking IKVM runtimes in CertBox..."
-          find ./src/CertBox/bin -type d -path "*/Release/net9.0/ikvm/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
-          find ./src/CertBox/bin -type d -path "*/Release/net9.0/ikvm/*" -not -path "*/Release/net9.0/ikvm/runtimes/${{ matrix.runtime }}" -not -path "*/Release/net9.0/ikvm" -exec rm -rf {} + || true
-
-      - name: Clean up runtimes folders (macOS)
-        run: |
-          echo "Checking runtimes in CertBox.TestGenerator..."
-          find ./src/CertBox.TestGenerator/bin -type d -path "*/Release/net9.0/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
-          echo "Checking runtimes in CertBox.Tests..."
-          find ./tests/CertBox.Tests/bin -type d -path "*/Release/net9.0/runtimes/*" -not -name "${{ matrix.runtime }}" -exec rm -rf {} + || true
-
-      - name: Log disk usage (after cleanup)
-        run: df -h
-
       - name: Publish CertBox (with trimming disabled)
         run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=None -o ./publish/${{ matrix.runtime }}
-
-      - name: Log disk usage (after publish)
-        run: df -h
 
       - name: Create macOS .app bundle
         run: |
@@ -515,69 +282,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download Windows x64 artifact
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: CertBox-win-x64
-          path: artifacts/win-x64
-
-      - name: Download Windows arm64 artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: CertBox-win-arm64
-          path: artifacts/win-arm64
-
-      - name: Download Linux x64 artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: CertBox-linux-x64
-          path: artifacts/linux-x64
-
-      - name: Download Linux arm64 artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: CertBox-linux-arm64
-          path: artifacts/linux-arm64
-
-      - name: Download macOS arm64 artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: CertBox-macos-arm64
-          path: artifacts/macos-arm64
-
-      - name: Download macOS x64 artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: CertBox-macos-x64
-          path: artifacts/macos-x64
-
-      - name: Download macOS arm64 .app bundle
-        uses: actions/download-artifact@v4
-        with:
-          name: CertBox-macos-arm64-app
-          path: artifacts/macos-arm64-app
-
-      - name: Download macOS x64 .app bundle
-        uses: actions/download-artifact@v4
-        with:
-          name: CertBox-macos-x64-app
-          path: artifacts/macos-x64-app
-
-      - name: Zip extracted artifacts
-        run: |
-          cd artifacts/win-x64
-          zip -r ../../CertBox-win-x64.zip .
-          cd ../win-arm64
-          zip -r ../../CertBox-win-arm64.zip .
-          cd ../linux-x64
-          zip -r ../../CertBox-linux-x64.zip .
-          cd ../linux-arm64
-          zip -r ../../CertBox-linux-arm64.zip .
-          cd ../macos-arm64
-          zip -r ../../CertBox-macos-arm64.zip .
-          cd ../macos-x64
-          zip -r ../../CertBox-macos-x64.zip .
-          cd ../..
+          path: artifacts
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -587,13 +295,13 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            CertBox-win-x64.zip
-            CertBox-win-arm64.zip
-            CertBox-linux-x64.zip
-            CertBox-linux-arm64.zip
-            CertBox-macos-arm64.zip
-            CertBox-macos-x64.zip
-            artifacts/macos-arm64-app/CertBox-macos-arm64.app.zip
-            artifacts/macos-x64-app/CertBox-macos-x64.app.zip
+            artifacts/CertBox-win-x64/CertBox-win-x64.zip
+            artifacts/CertBox-win-arm64/CertBox-win-arm64.zip
+            artifacts/CertBox-linux-x64/CertBox-linux-x64.zip
+            artifacts/CertBox-linux-arm64/CertBox-linux-arm64.zip
+            artifacts/CertBox-macos-arm64/CertBox-macos-arm64.zip
+            artifacts/CertBox-macos-x64/CertBox-macos-x64.zip
+            artifacts/CertBox-macos-arm64-app/CertBox-macos-arm64.app.zip
+            artifacts/CertBox-macos-x64-app/CertBox-macos-x64.app.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

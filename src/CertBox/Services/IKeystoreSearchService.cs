@@ -9,5 +9,6 @@ namespace CertBox.Services
         void StartSearch();
         void StartDeepSearch(Action onComplete = null);
         void StopSearch();
+        string GetJVMLibraryPath();
     }
 }

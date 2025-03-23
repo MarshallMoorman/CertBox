@@ -1,5 +1,3 @@
-// src/CertBox/Services/CertificateService.cs
-
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Security.Cryptography.X509Certificates;
@@ -10,12 +8,14 @@ using java.io;
 using java.security;
 using java.security.cert;
 using Microsoft.Extensions.Logging;
+using FileNotFoundException = System.IO.FileNotFoundException;
 
 namespace CertBox.Services
 {
     public class CertificateService : INotifyPropertyChanged
     {
         private readonly ILogger<CertificateService> _logger;
+        private readonly IKeystoreSearchService _keystoreSearchService; // Add dependency
         private KeyStore _keyStore;
         private string _currentPath;
         private string _currentPassword;
@@ -23,9 +23,10 @@ namespace CertBox.Services
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public CertificateService(ILogger<CertificateService> logger)
+        public CertificateService(ILogger<CertificateService> logger, IKeystoreSearchService keystoreSearchService)
         {
             _logger = logger;
+            _keystoreSearchService = keystoreSearchService;
             _allCertificates = new ObservableCollection<CertificateModel>();
             _allCertificates.CollectionChanged += (s, e) => OnPropertyChanged(nameof(AllCertificates));
         }
@@ -41,6 +42,8 @@ namespace CertBox.Services
         {
             try
             {
+                // Check JVM availability before loading
+                _keystoreSearchService.GetJVMLibraryPath(); // This will throw if no JDK is found
                 _logger.LogDebug("Loading keystore from: {Path}", path);
                 _keyStore = KeyStore.getInstance("JKS");
                 using (var stream = new FileInputStream(path))
@@ -51,6 +54,11 @@ namespace CertBox.Services
                 _currentPath = path;
                 _currentPassword = password;
                 _logger.LogDebug("Keystore loaded successfully");
+            }
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogError(ex, "No JDK configured for loading keystore from {Path}", path);
+                throw new InvalidOperationException("No JDK configured. Please set a valid JDK path in settings.", ex);
             }
             catch (java.io.IOException ex) when (ex.Message.Contains("Invalid keystore format"))
             {
@@ -184,16 +192,14 @@ namespace CertBox.Services
             }
             catch (InvalidOperationException ex)
             {
-                // Reset the keystore state on failure
                 _keyStore = null;
                 _currentPath = null;
                 _currentPassword = null;
                 _logger.LogError(ex, "Error loading certificates from {KeystorePath}", keystorePath);
-                throw; // Let MainWindowViewModel handle the user-friendly message
+                throw;
             }
             catch (Exception ex)
             {
-                // Reset the keystore state on failure
                 _keyStore = null;
                 _currentPath = null;
                 _currentPassword = null;
