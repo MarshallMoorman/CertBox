@@ -67,7 +67,8 @@ namespace CertBox
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(baseDir)
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddJsonFile("../Resources/appsettings.json", optional: true, reloadOnChange: true)
                 .Build();
 
             var logPathSection = FindLogPathSection(configuration);

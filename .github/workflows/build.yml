@@ -42,7 +42,7 @@ jobs:
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
 
       - name: Publish CertBox (with trimming disabled)
-        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=None -o ./publish/${{ matrix.runtime }}
+        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
 
       - name: Zip artifact
         shell: powershell
@@ -85,7 +85,7 @@ jobs:
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
 
       - name: Publish CertBox (with trimming disabled)
-        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=None -o ./publish/${{ matrix.runtime }}
+        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
 
       - name: Zip artifact
         run: |
@@ -126,13 +126,16 @@ jobs:
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
 
       - name: Publish CertBox (with trimming disabled)
-        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=None -o ./publish/${{ matrix.runtime }}
+        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
 
       - name: Create macOS .app bundle
         run: |
           mkdir -p ./publish/CertBox.app/Contents/MacOS
           mkdir -p ./publish/CertBox.app/Contents/Resources
           cp ./publish/${{ matrix.runtime }}/CertBox ./publish/CertBox.app/Contents/MacOS/
+          cp ./publish/${{ matrix.runtime }}/lib*.dylib ./publish/CertBox.app/Contents/MacOS/
+          cp ./publish/${{ matrix.runtime }}/*.pdb ./publish/CertBox.app/Contents/MacOS/ 2>/dev/null || true
+          cp ./publish/${{ matrix.runtime }}/appsettings.json ./publish/CertBox.app/Contents/Resources/
           cp src/CertBox/Assets/CertBox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
           cp src/CertBox/Assets/Info.plist ./publish/CertBox.app/Contents/Info.plist
           cp src/CertBox/Assets/CertBox.entitlements ./publish/CertBox.entitlements
@@ -155,6 +158,13 @@ jobs:
 
       - name: Sign macOS .app bundle
         run: |
+          for dylib in ./publish/CertBox.app/Contents/MacOS/lib*.dylib; do
+            codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+              --options runtime \
+              --entitlements ./publish/CertBox.entitlements \
+              --timestamp \
+              "$dylib"
+          done
           codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             --entitlements ./publish/CertBox.entitlements \
@@ -277,13 +287,16 @@ jobs:
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
 
       - name: Publish CertBox (with trimming disabled)
-        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=None -o ./publish/${{ matrix.runtime }}
+        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
 
       - name: Create macOS .app bundle
         run: |
           mkdir -p ./publish/CertBox.app/Contents/MacOS
           mkdir -p ./publish/CertBox.app/Contents/Resources
           cp ./publish/${{ matrix.runtime }}/CertBox ./publish/CertBox.app/Contents/MacOS/
+          cp ./publish/${{ matrix.runtime }}/lib*.dylib ./publish/CertBox.app/Contents/MacOS/
+          cp ./publish/${{ matrix.runtime }}/*.pdb ./publish/CertBox.app/Contents/MacOS/ 2>/dev/null || true
+          cp ./publish/${{ matrix.runtime }}/appsettings.json ./publish/CertBox.app/Contents/Resources/
           cp src/CertBox/Assets/CertBox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
           cp src/CertBox/Assets/Info.plist ./publish/CertBox.app/Contents/Info.plist
           cp src/CertBox/Assets/CertBox.entitlements ./publish/CertBox.entitlements
@@ -306,6 +319,13 @@ jobs:
 
       - name: Sign macOS .app bundle
         run: |
+          for dylib in ./publish/CertBox.app/Contents/MacOS/lib*.dylib; do
+            codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+              --options runtime \
+              --entitlements ./publish/CertBox.entitlements \
+              --timestamp \
+              "$dylib"
+          done
           codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             --entitlements ./publish/CertBox.entitlements \

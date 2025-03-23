@@ -40,14 +40,12 @@
         <AvaloniaResource Include="Assets\Inter-Regular.ttf"/>
         <AvaloniaResource Include="Assets\Inter-SemiBold.ttf"/>
         <AvaloniaResource Include="Assets\Inter-Thin.ttf"/>
-        <None Remove="Assets\certbox_icon_only.svg"/>
-        <None Remove="Assets\certbox_icon_only.png"/>
-        <None Remove="ikvm/**" />
+        <None Remove="ikvm/**"/>
         <AvaloniaResource Include="Assets\certbox_icon_only.png"/>
     </ItemGroup>
 
     <ItemGroup>
-        <None Update="appsettings.json">
+        <None Update="appsettings.json" CopyToPublishDirectory="Always">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>
