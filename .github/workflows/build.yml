@@ -165,6 +165,13 @@ jobs:
               --timestamp \
               "$dylib"
           done
+          for pdb in ./publish/CertBox.app/Contents/MacOS/*.pdb; do
+            codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+              --options runtime \
+              --entitlements ./publish/CertBox.entitlements \
+              --timestamp \
+              "$pdb"
+          done
           codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             --entitlements ./publish/CertBox.entitlements \
@@ -325,6 +332,13 @@ jobs:
               --entitlements ./publish/CertBox.entitlements \
               --timestamp \
               "$dylib"
+          done
+          for pdb in ./publish/CertBox.app/Contents/MacOS/*.pdb; do
+            codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+              --options runtime \
+              --entitlements ./publish/CertBox.entitlements \
+              --timestamp \
+              "$pdb"
           done
           codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
