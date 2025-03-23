@@ -164,10 +164,9 @@ jobs:
             --entitlements ./publish/CertBox.entitlements \
             ./publish/CertBox.app
 
-      - name: Verify signature
+      - name: Verify signature pre-notarization
         run: |
           codesign -dvv ./publish/CertBox.app
-          spctl -a -t exec -vv ./publish/CertBox.app
 
       - name: Notarize macOS .app bundle
         env:
@@ -184,7 +183,19 @@ jobs:
             --key-id "${{ secrets.APPSTORE_CONNECT_KEY_ID }}" \
             --issuer "${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}" \
             --wait \
-            --output-format json > notarization-result.json
+            --output-format json > notarization-result.json || {
+            echo "Notarization submission failed. Fetching logs..."
+            SUBMISSION_ID=$(jq -r '.id' notarization-result.json 2>/dev/null || echo "unknown")
+            if [ "$SUBMISSION_ID" != "unknown" ]; then
+              xcrun notarytool log "$SUBMISSION_ID" \
+                --key $API_KEY_PATH \
+                --key-id "${{ secrets.APPSTORE_CONNECT_KEY_ID }}" \
+                --issuer "${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}" \
+                notarization-log.json || echo "Failed to fetch logs"
+              cat notarization-log.json 2>/dev/null || echo "No log file available"
+            fi
+            exit 1
+          }
           SUBMISSION_ID=$(jq -r '.id' notarization-result.json)
           STATUS=$(jq -r '.status' notarization-result.json)
           echo "Notarization Submission ID: $SUBMISSION_ID"
@@ -200,6 +211,11 @@ jobs:
             exit 1
           fi
           xcrun stapler staple CertBox.app
+
+      - name: Verify signature post-notarization
+        run: |
+          codesign -dvv ./publish/CertBox.app
+          spctl -a -t exec -vv ./publish/CertBox.app
 
       - name: Clean up keychain
         if: always()
@@ -296,10 +312,9 @@ jobs:
             --entitlements ./publish/CertBox.entitlements \
             ./publish/CertBox.app
 
-      - name: Verify signature
+      - name: Verify signature pre-notarization
         run: |
           codesign -dvv ./publish/CertBox.app
-          spctl -a -t exec -vv ./publish/CertBox.app
 
       - name: Notarize macOS .app bundle
         env:
@@ -316,7 +331,19 @@ jobs:
             --key-id "${{ secrets.APPSTORE_CONNECT_KEY_ID }}" \
             --issuer "${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}" \
             --wait \
-            --output-format json > notarization-result.json
+            --output-format json > notarization-result.json || {
+            echo "Notarization submission failed. Fetching logs..."
+            SUBMISSION_ID=$(jq -r '.id' notarization-result.json 2>/dev/null || echo "unknown")
+            if [ "$SUBMISSION_ID" != "unknown" ]; then
+              xcrun notarytool log "$SUBMISSION_ID" \
+                --key $API_KEY_PATH \
+                --key-id "${{ secrets.APPSTORE_CONNECT_KEY_ID }}" \
+                --issuer "${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}" \
+                notarization-log.json || echo "Failed to fetch logs"
+              cat notarization-log.json 2>/dev/null || echo "No log file available"
+            fi
+            exit 1
+          }
           SUBMISSION_ID=$(jq -r '.id' notarization-result.json)
           STATUS=$(jq -r '.status' notarization-result.json)
           echo "Notarization Submission ID: $SUBMISSION_ID"
@@ -332,6 +359,11 @@ jobs:
             exit 1
           fi
           xcrun stapler staple CertBox.app
+
+      - name: Verify signature post-notarization
+        run: |
+          codesign -dvv ./publish/CertBox.app
+          spctl -a -t exec -vv ./publish/CertBox.app
 
       - name: Clean up keychain
         if: always()
