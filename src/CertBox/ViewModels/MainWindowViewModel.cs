@@ -100,6 +100,17 @@ namespace CertBox.ViewModels
                 }
             };
 
+            // Check for a valid JDK path at startup
+            try
+            {
+                _searchService.GetJVMLibraryPath();
+            }
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "No JDK path configured at startup.");
+                ShowError("No JDK path configured. Please set a valid JDK path in settings.");
+            }
+
             SetDefaultKeystorePath();
 
             if (!string.IsNullOrEmpty(_userConfigService.Config.LastKeystorePath))
@@ -130,7 +141,7 @@ namespace CertBox.ViewModels
 #if DEBUG
             DefaultKeystorePath = _applicationContext.DefaultKeystorePath;
 #else
-            // TODO: Find the default cacerts file based on the user's JAVA_HOME variable or PATH if JAVA_HOME doesn't exist.
+            // TODO: Find the default keystore file based on the user's JAVA_HOME variable or PATH if JAVA_HOME doesn't exist.
 #endif
         }
 
@@ -329,6 +340,18 @@ namespace CertBox.ViewModels
                     {
                         _userConfigService.UpdateJdkPath(result);
                         _logger.LogInformation("JDK path configured successfully: {Path}", result);
+
+                        // Look for a keystore file in the JDK's lib/security directory
+                        string keystorePath = Path.Combine(result, "lib", "security", "cacerts");
+                        if (File.Exists(keystorePath))
+                        {
+                            _logger.LogInformation("Found keystore in JDK: {KeystorePath}", keystorePath);
+                            _searchService.AddKeystorePath(keystorePath);
+                        }
+                        else
+                        {
+                            _logger.LogDebug("No keystore file found in JDK at: {KeystorePath}", keystorePath);
+                        }
 
                         // Refresh keystore list and reload certificates
                         _searchService.StartSearch();

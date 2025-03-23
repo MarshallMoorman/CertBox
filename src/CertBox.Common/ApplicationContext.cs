@@ -2,7 +2,7 @@ namespace CertBox.Common;
 
 public class ApplicationContext : IApplicationContext
 {
-    private const string DefaultKeystoreSuffix = "tests/resources/test_cacerts";
+    private const string DefaultKeystoreSuffix = "tests/resources/test_keystore";
     private const string DefaultSampleCertsSuffix = "tests/resources/sample_certs";
     private const string LogsDirectoryName = "logs";
     private readonly string _pathToRoot;

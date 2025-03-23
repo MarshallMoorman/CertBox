@@ -5,9 +5,9 @@ namespace CertBox.Common
 {
     public interface IKeystoreFinder
     {
-        Task SearchCommonLocations(ObservableCollection<string> cacertsFiles);
+        Task SearchCommonLocations(ObservableCollection<string> keystoreFiles);
 
-        void SearchFilesystem(ObservableCollection<string> cacertsFiles, Action<string> addToCollection,
+        void SearchFilesystem(ObservableCollection<string> keystoreFiles, Action<string> addToCollection,
             CancellationToken cancellationToken, ILogger logger);
     }
 }

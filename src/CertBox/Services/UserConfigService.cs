@@ -17,7 +17,27 @@ namespace CertBox.Services
             _logger = logger;
             _applicationContext = applicationContext;
             _configPath = _applicationContext.UserConfigPath;
-            Directory.CreateDirectory(Path.GetDirectoryName(_configPath));
+            var configDir = Path.GetDirectoryName(_configPath);
+            Directory.CreateDirectory(configDir);
+
+            // On Windows, set the Hidden attribute for the .certbox directory
+            if (OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    var dirInfo = new DirectoryInfo(configDir);
+                    if (!dirInfo.Attributes.HasFlag(FileAttributes.Hidden))
+                    {
+                        dirInfo.Attributes |= FileAttributes.Hidden;
+                        _logger.LogDebug("Set Hidden attribute on directory: {ConfigDir}", configDir);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to set Hidden attribute on directory: {ConfigDir}", configDir);
+                }
+            }
+
             LoadConfig();
         }
 
@@ -31,6 +51,11 @@ namespace CertBox.Services
                 {
                     var json = File.ReadAllText(_configPath);
                     _config = JsonSerializer.Deserialize<UserConfig>(json) ?? new UserConfig();
+                    if (!string.IsNullOrEmpty(_config.JdkPath))
+                    {
+                        _config.JdkPath = NormalizePath(_config.JdkPath);
+                    }
+
                     _logger.LogInformation("Loaded user config from {ConfigPath}", _configPath);
                 }
                 else
@@ -43,7 +68,7 @@ namespace CertBox.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to load user config from {ConfigPath}", _configPath);
-                _config = new UserConfig(); // Fallback to default
+                _config = new UserConfig();
             }
         }
 
@@ -63,8 +88,23 @@ namespace CertBox.Services
 
         public void UpdateJdkPath(string jdkPath)
         {
-            Config.JdkPath = jdkPath;
+            Config.JdkPath = NormalizePath(jdkPath);
             SaveConfig();
+        }
+
+        private string NormalizePath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return path;
+
+            // Normalize the path using Path.GetFullPath to resolve any relative paths
+            path = Path.GetFullPath(path);
+
+            // Use the platform-specific directory separator
+            char separator = Path.DirectorySeparatorChar; // '\' on Windows, '/' on Unix-like systems
+            path = path.Replace('/', separator).Replace('\\', separator);
+
+            return path;
         }
     }
 }

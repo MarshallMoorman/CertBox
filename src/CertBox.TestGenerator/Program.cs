@@ -41,7 +41,7 @@ namespace CertBox.TestGenerator
 
                 generator.GenerateTestKeystore(outputPath, password);
                 _serviceProvider.GetRequiredService<ILogger<Program>>()
-                    .LogInformation("Test cacerts file generated at: {OutputPath}", outputPath);
+                    .LogInformation("Test keystore file generated at: {OutputPath}", outputPath);
 
                 // Generate sample certificates
                 generator.GenerateSampleCertificates(sampleDir);
@@ -51,7 +51,7 @@ namespace CertBox.TestGenerator
             catch (Exception ex)
             {
                 _serviceProvider.GetRequiredService<ILogger<Program>>().LogError(ex,
-                    "Error generating test cacerts file or sample certificates");
+                    "Error generating test keystore file or sample certificates");
             }
         }
 

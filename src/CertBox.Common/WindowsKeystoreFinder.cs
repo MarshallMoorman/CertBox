@@ -42,7 +42,7 @@ namespace CertBox.Common
             _logger = logger;
         }
 
-        public async Task SearchCommonLocations(ObservableCollection<string> cacertsFiles)
+        public async Task SearchCommonLocations(ObservableCollection<string> keystoreFiles)
         {
             await Task.Run(() =>
             {
@@ -74,10 +74,10 @@ namespace CertBox.Common
                                                  "cacerts",
                                                  SearchOption.AllDirectories))
                                     {
-                                        if (IsValidKeystoresFile(file) && !cacertsFiles.Contains(file))
+                                        if (IsValidKeystoresFile(file) && !keystoreFiles.Contains(file))
                                         {
-                                            _logger.LogInformation("[Common] Found cacerts file: {Path}", file);
-                                            cacertsFiles.Add(file);
+                                            _logger.LogInformation("[Common] Found keystore file: {Path}", file);
+                                            keystoreFiles.Add(file);
                                         }
                                     }
                                 }
@@ -109,10 +109,10 @@ namespace CertBox.Common
                         {
                             foreach (var file in Directory.EnumerateFiles(searchDir, "cacerts", SearchOption.AllDirectories))
                             {
-                                if (IsValidKeystoresFile(file) && !cacertsFiles.Contains(file))
+                                if (IsValidKeystoresFile(file) && !keystoreFiles.Contains(file))
                                 {
-                                    _logger.LogInformation("[Common] Found cacerts file: {Path}", file);
-                                    cacertsFiles.Add(file);
+                                    _logger.LogInformation("[Common] Found keystore file: {Path}", file);
+                                    keystoreFiles.Add(file);
                                 }
                             }
                         }
@@ -135,7 +135,7 @@ namespace CertBox.Common
             });
         }
 
-        public void SearchFilesystem(ObservableCollection<string> cacertsFiles, Action<string> addToCollection,
+        public void SearchFilesystem(ObservableCollection<string> keystoreFiles, Action<string> addToCollection,
             CancellationToken cancellationToken, ILogger logger)
         {
             foreach (var root in SearchRoots)
@@ -144,11 +144,11 @@ namespace CertBox.Common
                 if (ExcludedRoots.Any(excluded => root.StartsWith(excluded))) continue;
                 if (CommonLocations.Any(common => root.StartsWith(common.EndsWith("/*") ? common[..^2] : common))) continue;
 
-                SearchDirectory(root, cacertsFiles, addToCollection, cancellationToken);
+                SearchDirectory(root, keystoreFiles, addToCollection, cancellationToken);
             }
         }
 
-        private void SearchDirectory(string root, ObservableCollection<string> cacertsFiles, Action<string> addToCollection,
+        private void SearchDirectory(string root, ObservableCollection<string> keystoreFiles, Action<string> addToCollection,
             CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested) return;
@@ -161,16 +161,16 @@ namespace CertBox.Common
                 {
                     if (cancellationToken.IsCancellationRequested) return;
 
-                    if (IsValidKeystoresFile(file) && !cacertsFiles.Contains(file))
+                    if (IsValidKeystoresFile(file) && !keystoreFiles.Contains(file))
                     {
-                        _logger.LogInformation("[Deep] Found cacerts file: {Path}", file);
+                        _logger.LogInformation("[Deep] Found keystore file: {Path}", file);
                         addToCollection(file);
                     }
                 }
 
                 foreach (var dir in Directory.EnumerateDirectories(root))
                 {
-                    SearchDirectory(dir, cacertsFiles, addToCollection, cancellationToken);
+                    SearchDirectory(dir, keystoreFiles, addToCollection, cancellationToken);
                 }
             }
             catch (UnauthorizedAccessException ex)

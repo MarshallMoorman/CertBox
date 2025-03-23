@@ -33,7 +33,7 @@
                 </Button.Content>
             </Button>
 
-            <!-- Import certificate to current cacerts file -->
+            <!-- Import certificate to current keystore file -->
             <Button Command="{Binding ImportCommand}" Margin="5,0">
                 <Button.Content>
                     <StackPanel Orientation="Horizontal" Spacing="5">

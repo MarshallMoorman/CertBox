@@ -10,7 +10,7 @@
                     Command="{Binding ClearErrorCommand}">
                 <Button.Content>
                     <StackPanel Orientation="Horizontal" Spacing="5">
-                        <PathIcon Data="{StaticResource Icon.Clear}" Width="16" Height="16"
+                        <PathIcon Data="{StaticResource Icon.Close}" Width="16" Height="16"
                                   Foreground="{DynamicResource ForegroundColor}" />
                     </StackPanel>
                 </Button.Content>
