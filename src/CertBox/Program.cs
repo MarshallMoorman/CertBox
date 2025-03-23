@@ -27,18 +27,6 @@ namespace CertBox
 
             try
             {
-                var keystoreSearchService = _serviceProvider.GetService<IKeystoreSearchService>();
-                try
-                {
-                    var jvmPath = keystoreSearchService.GetJVMLibraryPath();
-                    BaseKeystoreSearchService.SetJVMLibraryPath(jvmPath);
-                }
-                catch (FileNotFoundException ex)
-                {
-                    var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
-                    logger.LogWarning(ex, "No JDK found at startup. User must configure a JDK path via settings.");
-                }
-
                 BuildAvaloniaApp()
                     .StartWithClassicDesktopLifetime(args);
             }

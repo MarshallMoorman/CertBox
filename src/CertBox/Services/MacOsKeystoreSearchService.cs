@@ -15,56 +15,39 @@ namespace CertBox.Services
 
         public override string GetJVMLibraryPath()
         {
-            // Check user-configured JDK path first
+            _logger.LogDebug("Checking for user-configured JDK path: {JdkPath}", _userConfigService.Config.JdkPath);
             if (!string.IsNullOrEmpty(_userConfigService.Config.JdkPath))
             {
-                string[] possibleJvmPaths =
+                string keytoolPath = Path.Combine(_userConfigService.Config.JdkPath, "bin", "keytool");
+                _logger.LogDebug("Checking keytool path: {Path}", keytoolPath);
+                if (File.Exists(keytoolPath))
                 {
-                    Path.Combine(_userConfigService.Config.JdkPath, "lib/libjvm.dylib"),
-                    Path.Combine(_userConfigService.Config.JdkPath, "lib/server/libjvm.dylib")
-                };
-
-                foreach (var jvmPath in possibleJvmPaths)
-                {
-                    if (File.Exists(jvmPath))
-                    {
-                        _logger.LogInformation("Found libjvm.dylib at user-configured path: {Path}", jvmPath);
-                        return Path.GetDirectoryName(jvmPath);
-                    }
+                    _logger.LogInformation("Found keytool at user-configured path: {Path}", keytoolPath);
+                    return _userConfigService.Config.JdkPath;
                 }
-
-                _logger.LogWarning("User-configured JDK path {JdkPath} does not contain libjvm.dylib in expected locations.",
-                    _userConfigService.Config.JdkPath);
+                _logger.LogWarning("User-configured JDK path {JdkPath} does not contain keytool in expected location.", _userConfigService.Config.JdkPath);
             }
             else
             {
                 _logger.LogDebug("No user-configured JDK path found in config.");
             }
 
-            // Fallback to auto-detection
             _logger.LogDebug("Attempting to auto-detect JDK in /Library/Java/JavaVirtualMachines");
-            foreach (var dir in Directory.EnumerateDirectories("/Library/Java/JavaVirtualMachines",
-                         "*",
-                         SearchOption.TopDirectoryOnly))
+            foreach (var dir in Directory.EnumerateDirectories("/Library/Java/JavaVirtualMachines", "*", SearchOption.TopDirectoryOnly))
             {
-                string[] possibleJvmPaths =
+                _logger.LogDebug("Checking JDK directory: {Dir}", dir);
+                string keytoolPath = Path.Combine(dir, "Contents/Home/bin/keytool");
+                _logger.LogDebug("Checking keytool path: {Path}", keytoolPath);
+                if (File.Exists(keytoolPath))
                 {
-                    Path.Combine(dir, "Contents/Home/lib/libjvm.dylib"),
-                    Path.Combine(dir, "Contents/Home/lib/server/libjvm.dylib")
-                };
-
-                foreach (var jvmPath in possibleJvmPaths)
-                {
-                    if (File.Exists(jvmPath))
-                    {
-                        _logger.LogInformation("Auto-detected libjvm.dylib at: {Path}", jvmPath);
-                        return Path.GetDirectoryName(jvmPath);
-                    }
+                    var jdkPath = Path.GetDirectoryName(Path.GetDirectoryName(keytoolPath));
+                    _logger.LogInformation("Auto-detected JDK at: {Path}", jdkPath);
+                    return jdkPath;
                 }
             }
 
-            _logger.LogError("Could not locate libjvm.dylib in any expected location.");
-            throw new FileNotFoundException("Could not locate libjvm.dylib. Please specify a valid JDK path in settings.");
+            _logger.LogError("Could not locate keytool in any expected location.");
+            throw new FileNotFoundException("Could not locate keytool. Please specify a valid JDK path in settings.");
         }
 
         protected override void StartBackgroundSearch(Action onComplete)

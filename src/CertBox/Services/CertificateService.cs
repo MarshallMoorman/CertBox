@@ -1,25 +1,23 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Text.RegularExpressions;
 using Avalonia.Threading;
 using CertBox.Common;
 using CertBox.Models;
-using java.io;
-using java.security;
-using java.security.cert;
 using Microsoft.Extensions.Logging;
-using FileNotFoundException = System.IO.FileNotFoundException;
 
 namespace CertBox.Services
 {
     public class CertificateService : INotifyPropertyChanged
     {
         private readonly ILogger<CertificateService> _logger;
-        private readonly IKeystoreSearchService _keystoreSearchService; // Add dependency
-        private KeyStore _keyStore;
+        private readonly IKeystoreSearchService _keystoreSearchService;
+        private readonly ObservableCollection<CertificateModel> _allCertificates;
         private string _currentPath;
         private string _currentPassword;
-        private readonly ObservableCollection<CertificateModel> _allCertificates;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -38,137 +36,19 @@ namespace CertBox.Services
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        public void LoadKeystore(string path, string password)
+        private string GetKeytoolPath()
         {
-            try
-            {
-                // Check JVM availability before loading
-                _keystoreSearchService.GetJVMLibraryPath(); // This will throw if no JDK is found
-                _logger.LogDebug("Loading keystore from: {Path}", path);
-                _keyStore = KeyStore.getInstance("JKS");
-                using (var stream = new FileInputStream(path))
-                {
-                    _keyStore.load(stream, password.ToCharArray());
-                }
+            string jdkPath = _keystoreSearchService.GetJVMLibraryPath();
+            string keytoolPath = Path.Combine(jdkPath, "bin", "keytool");
+            if (OperatingSystem.IsWindows())
+                keytoolPath += ".exe";
 
-                _currentPath = path;
-                _currentPassword = password;
-                _logger.LogDebug("Keystore loaded successfully");
-            }
-            catch (FileNotFoundException ex)
+            if (!File.Exists(keytoolPath))
             {
-                _logger.LogError(ex, "No JDK configured for loading keystore from {Path}", path);
-                throw new InvalidOperationException("No JDK configured. Please set a valid JDK path in settings.", ex);
-            }
-            catch (java.io.IOException ex) when (ex.Message.Contains("Invalid keystore format"))
-            {
-                _logger.LogError(ex, "Invalid keystore format for {Path}", path);
-                throw new InvalidOperationException($"The file {path} is not a valid keystore: Invalid format.", ex);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading keystore from {Path}", path);
-                throw new InvalidOperationException($"Failed to load keystore from {path}: {ex.Message}", ex);
-            }
-        }
-
-        public List<CertificateModel> GetCertificates()
-        {
-            if (_keyStore == null)
-            {
-                throw new InvalidOperationException("Keystore not loaded.");
+                throw new FileNotFoundException($"Could not find keytool at {keytoolPath}. Ensure the JDK path is correct.");
             }
 
-            try
-            {
-                _logger.LogDebug("Retrieving certificates from keystore");
-                var certificates = new List<CertificateModel>();
-                var aliases = _keyStore.aliases();
-
-                while (aliases.hasMoreElements())
-                {
-                    var alias = (string)aliases.nextElement();
-                    if (_keyStore.isCertificateEntry(alias))
-                    {
-                        var cert = (java.security.cert.X509Certificate)_keyStore.getCertificate(alias);
-                        var certBytes = cert.getEncoded();
-                        var netCert = X509CertificateLoader.LoadCertificate(certBytes);
-
-                        certificates.Add(new CertificateModel
-                        {
-                            Alias = alias,
-                            Subject = netCert.SubjectName.Name,
-                            Issuer = netCert.IssuerName.Name,
-                            ExpiryDate = netCert.NotAfter
-                        });
-                    }
-                }
-
-                _logger.LogDebug("Retrieved {Count} certificates", certificates.Count);
-                return certificates;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving certificates");
-                throw;
-            }
-        }
-
-        public void ImportCertificate(string alias, X509Certificate2 certificate)
-        {
-            if (_keyStore == null)
-            {
-                throw new InvalidOperationException("Keystore not loaded.");
-            }
-
-            if (certificate.NotAfter < DateTime.Now)
-            {
-                throw new ArgumentException("Cannot import an expired certificate.", nameof(certificate));
-            }
-
-            try
-            {
-                _logger.LogDebug("Importing certificate with alias: {Alias}", alias);
-                var certBytes = certificate.GetRawCertData();
-                var javaCert = CertificateFactory.getInstance("X.509")
-                    .generateCertificate(new ByteArrayInputStream(certBytes));
-                _keyStore.setCertificateEntry(alias, javaCert);
-                SaveKeystore();
-                _logger.LogInformation("Certificate imported successfully with alias: {Alias}", alias);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error importing certificate");
-                throw;
-            }
-        }
-
-        public void RemoveCertificate(string alias)
-        {
-            if (_keyStore == null)
-            {
-                throw new InvalidOperationException("Keystore not loaded.");
-            }
-
-            try
-            {
-                _logger.LogDebug("Removing certificate with alias: {Alias}", alias);
-                if (_keyStore.containsAlias(alias))
-                {
-                    _keyStore.deleteEntry(alias);
-                    SaveKeystore();
-                    _logger.LogInformation("Certificate removed successfully with alias: {Alias}", alias);
-                }
-                else
-                {
-                    _logger.LogWarning("No certificate found with alias: {Alias}", alias);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error removing certificate");
-                throw;
-            }
+            return keytoolPath;
         }
 
         public async Task LoadCertificatesAsync(string keystorePath, string password = Constants.DefaultKeystorePassword)
@@ -176,8 +56,48 @@ namespace CertBox.Services
             try
             {
                 _logger.LogDebug("Starting to load certificates from: {KeystorePath}", keystorePath);
-                LoadKeystore(keystorePath, password);
-                var certificates = GetCertificates();
+                _currentPath = keystorePath;
+                _currentPassword = password;
+
+                // Run keytool -list
+                var processInfo = new ProcessStartInfo
+                {
+                    FileName = GetKeytoolPath(),
+                    Arguments = $"-list -keystore \"{keystorePath}\" -storepass \"{password}\" -rfc",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = new Process { StartInfo = processInfo };
+                var outputBuilder = new StringBuilder();
+                var errorBuilder = new StringBuilder();
+
+                process.OutputDataReceived += (sender, args) =>
+                {
+                    if (args.Data != null) outputBuilder.AppendLine(args.Data);
+                };
+                process.ErrorDataReceived += (sender, args) =>
+                {
+                    if (args.Data != null) errorBuilder.AppendLine(args.Data);
+                };
+
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode != 0)
+                {
+                    _logger.LogError("keytool failed with exit code {ExitCode}. Error: {Error}",
+                        process.ExitCode,
+                        errorBuilder.ToString());
+                    throw new InvalidOperationException($"Failed to load certificates: {errorBuilder}");
+                }
+
+                var output = outputBuilder.ToString();
+                var certificates = ParseCertificates(output);
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     _allCertificates.Clear();
@@ -190,44 +110,162 @@ namespace CertBox.Services
                 });
                 _logger.LogInformation("Certificates loaded successfully");
             }
-            catch (InvalidOperationException ex)
-            {
-                _keyStore = null;
-                _currentPath = null;
-                _currentPassword = null;
-                _logger.LogError(ex, "Error loading certificates from {KeystorePath}", keystorePath);
-                throw;
-            }
             catch (Exception ex)
             {
-                _keyStore = null;
-                _currentPath = null;
-                _currentPassword = null;
                 _logger.LogError(ex, "Error loading certificates from {KeystorePath}", keystorePath);
                 throw new InvalidOperationException($"Failed to load certificates from {keystorePath}: {ex.Message}", ex);
             }
         }
 
-        private void SaveKeystore()
+        private List<CertificateModel> ParseCertificates(string keytoolOutput)
         {
-            if (_keyStore == null)
+            var certificates = new List<CertificateModel>();
+            var certBlocks =
+                keytoolOutput.Split(new[] { "-----END CERTIFICATE-----" }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var block in certBlocks)
+            {
+                if (!block.Contains("-----BEGIN CERTIFICATE-----")) continue;
+
+                // Extract alias
+                var aliasMatch = Regex.Match(block, @"Alias name: (.+)");
+                if (!aliasMatch.Success) continue;
+
+                var alias = aliasMatch.Groups[1].Value.Trim();
+
+                // Extract certificate details by parsing the PEM block
+                var pemStart = block.IndexOf("-----BEGIN CERTIFICATE-----");
+                var pemEnd = block.Length;
+                var pemBlock = block.Substring(pemStart, pemEnd - pemStart).Trim();
+                var certBytes = ConvertPemToBytes(pemBlock);
+                var x509Cert = new X509Certificate2(certBytes);
+
+                certificates.Add(new CertificateModel
+                {
+                    Alias = alias,
+                    Subject = x509Cert.SubjectName.Name,
+                    Issuer = x509Cert.IssuerName.Name,
+                    ExpiryDate = x509Cert.NotAfter
+                });
+            }
+
+            return certificates;
+        }
+
+        private byte[] ConvertPemToBytes(string pem)
+        {
+            var base64 = Regex.Replace(pem, @"(-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\r|\n)", "");
+            return Convert.FromBase64String(base64);
+        }
+
+        public void ImportCertificate(string alias, X509Certificate2 certificate)
+        {
+            if (string.IsNullOrEmpty(_currentPath))
+            {
+                throw new InvalidOperationException("Keystore not loaded.");
+            }
+
+            if (certificate.NotAfter < DateTime.Now)
+            {
+                throw new ArgumentException("Cannot import an expired certificate.", nameof(certificate));
+            }
+
+            try
+            {
+                _logger.LogDebug("Importing certificate with alias: {Alias}", alias);
+
+                // Save the certificate to a temporary file
+                var tempCertPath = Path.GetTempFileName();
+                File.WriteAllBytes(tempCertPath, certificate.Export(X509ContentType.Cert));
+
+                // Run keytool -importcert
+                var processInfo = new ProcessStartInfo
+                {
+                    FileName = GetKeytoolPath(),
+                    Arguments =
+                        $"-importcert -keystore \"{_currentPath}\" -storepass \"{_currentPassword}\" -alias \"{alias}\" -file \"{tempCertPath}\" -noprompt",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = new Process { StartInfo = processInfo };
+                var errorBuilder = new StringBuilder();
+
+                process.ErrorDataReceived += (sender, args) =>
+                {
+                    if (args.Data != null) errorBuilder.AppendLine(args.Data);
+                };
+                process.Start();
+                process.BeginErrorReadLine();
+                process.WaitForExit();
+
+                File.Delete(tempCertPath);
+
+                if (process.ExitCode != 0)
+                {
+                    _logger.LogError("keytool import failed with exit code {ExitCode}. Error: {Error}",
+                        process.ExitCode,
+                        errorBuilder.ToString());
+                    throw new InvalidOperationException($"Failed to import certificate: {errorBuilder}");
+                }
+
+                _logger.LogInformation("Certificate imported successfully with alias: {Alias}", alias);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error importing certificate");
+                throw;
+            }
+        }
+
+        public void RemoveCertificate(string alias)
+        {
+            if (string.IsNullOrEmpty(_currentPath))
             {
                 throw new InvalidOperationException("Keystore not loaded.");
             }
 
             try
             {
-                _logger.LogDebug("Saving keystore to: {Path}", _currentPath);
-                using (var stream = new java.io.FileOutputStream(_currentPath))
+                _logger.LogDebug("Removing certificate with alias: {Alias}", alias);
+
+                // Run keytool -delete
+                var processInfo = new ProcessStartInfo
                 {
-                    _keyStore.store(stream, _currentPassword.ToCharArray());
+                    FileName = GetKeytoolPath(),
+                    Arguments = $"-delete -keystore \"{_currentPath}\" -storepass \"{_currentPassword}\" -alias \"{alias}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = new Process { StartInfo = processInfo };
+                var errorBuilder = new StringBuilder();
+
+                process.ErrorDataReceived += (sender, args) =>
+                {
+                    if (args.Data != null) errorBuilder.AppendLine(args.Data);
+                };
+                process.Start();
+                process.BeginErrorReadLine();
+                process.WaitForExit();
+
+                if (process.ExitCode != 0)
+                {
+                    _logger.LogError("keytool delete failed with exit code {ExitCode}. Error: {Error}",
+                        process.ExitCode,
+                        errorBuilder.ToString());
+                    throw new InvalidOperationException($"Failed to remove certificate: {errorBuilder}");
                 }
 
-                _logger.LogInformation("Keystore saved successfully to: {Path}", _currentPath);
+                _logger.LogInformation("Certificate removed successfully with alias: {Alias}", alias);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving keystore");
+                _logger.LogError(ex, "Error removing certificate");
                 throw;
             }
         }

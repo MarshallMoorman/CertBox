@@ -48,19 +48,18 @@ namespace CertBox.Services
             }
         }
 
-        public async void StartSearch()
+        public void StartSearch()
         {
             if (File.Exists(_applicationContext.DefaultKeystorePath) &&
                 new FileInfo(_applicationContext.DefaultKeystorePath).Length > 0)
             {
                 _logger.LogInformation("[Development] Loaded valid path from cache: {Path}",
                     _applicationContext.DefaultKeystorePath);
-                // Add the keystore path to the list if not already present
                 AddKeystorePath(_applicationContext.DefaultKeystorePath);
             }
 
             LoadCache();
-            await _finder.SearchCommonLocations(KeystoreFiles);
+            _finder.SearchCommonLocations(KeystoreFiles);
             SaveCache();
         }
 
@@ -77,14 +76,6 @@ namespace CertBox.Services
         }
 
         public abstract string GetJVMLibraryPath();
-
-        public static void SetJVMLibraryPath(string jvmPath)
-        {
-            var currentPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            Environment.SetEnvironmentVariable("PATH", $"{jvmPath}{Path.PathSeparator}{currentPath}");
-            // IKVM uses java.library.path to locate libjvm
-            java.lang.System.setProperty("java.library.path", jvmPath);
-        }
 
         protected virtual void LoadCache()
         {

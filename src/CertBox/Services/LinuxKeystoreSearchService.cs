@@ -15,20 +15,38 @@ namespace CertBox.Services
 
         public override string GetJVMLibraryPath()
         {
-            if (!string.IsNullOrEmpty(_userConfigService.Config.JdkPath) &&
-                File.Exists(Path.Combine(_userConfigService.Config.JdkPath, "lib/libjvm.so")))
+            _logger.LogDebug("Checking for user-configured JDK path: {JdkPath}", _userConfigService.Config.JdkPath);
+            if (!string.IsNullOrEmpty(_userConfigService.Config.JdkPath))
             {
-                return Path.Combine(_userConfigService.Config.JdkPath, "lib");
+                string keytoolPath = Path.Combine(_userConfigService.Config.JdkPath, "bin", "keytool");
+                _logger.LogDebug("Checking keytool path: {Path}", keytoolPath);
+                if (File.Exists(keytoolPath))
+                {
+                    _logger.LogInformation("Found keytool at user-configured path: {Path}", keytoolPath);
+                    return _userConfigService.Config.JdkPath;
+                }
+                _logger.LogWarning("User-configured JDK path {JdkPath} does not contain keytool in expected location.", _userConfigService.Config.JdkPath);
+            }
+            else
+            {
+                _logger.LogDebug("No user-configured JDK path found in config.");
             }
 
+            _logger.LogDebug("Attempting to auto-detect JDK in /usr/lib/jvm");
             foreach (var dir in Directory.EnumerateDirectories("/usr/lib/jvm", "*", SearchOption.TopDirectoryOnly))
             {
-                var jvmPath = Path.Combine(dir, "lib/libjvm.so");
-                if (File.Exists(jvmPath))
-                    return Path.GetDirectoryName(jvmPath);
+                _logger.LogDebug("Checking JDK directory: {Dir}", dir);
+                string keytoolPath = Path.Combine(dir, "bin/keytool");
+                _logger.LogDebug("Checking keytool path: {Path}", keytoolPath);
+                if (File.Exists(keytoolPath))
+                {
+                    _logger.LogInformation("Auto-detected JDK at: {Path}", dir);
+                    return dir;
+                }
             }
 
-            throw new FileNotFoundException("Could not locate libjvm.so. Please specify a valid JDK path in settings.");
+            _logger.LogError("Could not locate keytool in any expected location.");
+            throw new FileNotFoundException("Could not locate keytool. Please specify a valid JDK path in settings.");
         }
 
         protected override void StartBackgroundSearch(Action onComplete)

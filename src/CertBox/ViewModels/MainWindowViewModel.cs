@@ -1,5 +1,3 @@
-// src/CertBox/ViewModels/MainWindowViewModel.cs
-
 using System.Collections.ObjectModel;
 using System.Security.Cryptography.X509Certificates;
 using CertBox.Common;
@@ -23,6 +21,7 @@ namespace CertBox.ViewModels
         private readonly DeepSearchService _deepSearchService;
         private readonly ViewState _viewState;
 
+        [NotifyCanExecuteChangedFor(nameof(ClearSearchCommand))]
         [ObservableProperty]
         private string _searchQuery = string.Empty;
 
@@ -79,14 +78,12 @@ namespace CertBox.ViewModels
             _deepSearchService = deepSearchService;
             _viewState = viewState;
 
-            // Initialize Certificates with the service's AllCertificates
             _certificates = _certificateService.AllCertificates;
 
             _viewState.IsErrorPaneVisible = false;
             _viewState.ErrorMessage = string.Empty;
             _viewState.IsDeepSearchRunning = false;
 
-            // Subscribe to ViewState's PropertyChanged to propagate changes
             _viewState.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(ViewState.ErrorMessage))
@@ -105,7 +102,6 @@ namespace CertBox.ViewModels
 
             SetDefaultKeystorePath();
 
-            // Load the last keystore path from user config
             if (!string.IsNullOrEmpty(_userConfigService.Config.LastKeystorePath))
             {
                 if (File.Exists(_userConfigService.Config.LastKeystorePath))
@@ -119,7 +115,7 @@ namespace CertBox.ViewModels
                     ShowError($"Last keystore path does not exist: {_userConfigService.Config.LastKeystorePath}");
                 }
             }
-            else if (File.Exists(DefaultKeystorePath)) // Preselect test cacerts file in debug mode if it exists
+            else if (File.Exists(DefaultKeystorePath))
             {
                 SelectedFilePath = DefaultKeystorePath;
             }
@@ -146,13 +142,12 @@ namespace CertBox.ViewModels
                 {
                     _logger.LogWarning("Selected keystore file does not exist: {Path}", SelectedFilePath);
                     ShowError($"Selected keystore file does not exist: {SelectedFilePath}");
-                    SelectedFilePath = string.Empty; // Clear the selected path if it doesn't exist
+                    SelectedFilePath = string.Empty;
                     return;
                 }
 
                 try
                 {
-                    // Add the keystore path to the list if not already present
                     _searchService.AddKeystorePath(SelectedFilePath);
                     await _certificateService.LoadCertificatesAsync(SelectedFilePath);
                 }
@@ -160,7 +155,7 @@ namespace CertBox.ViewModels
                 {
                     _logger.LogError(ex, "Error loading certificates from {Path}", SelectedFilePath);
                     ShowError($"Error loading certificates from {SelectedFilePath}: {ex.Message}");
-                    SelectedFilePath = string.Empty; // Clear the selected path on failure
+                    SelectedFilePath = string.Empty;
                 }
             }
         }
@@ -173,7 +168,6 @@ namespace CertBox.ViewModels
             }
             else if (e.PropertyName == nameof(SelectedFilePath))
             {
-                // Save the selected keystore path to user config
                 _userConfigService.Config.LastKeystorePath = SelectedFilePath;
                 _userConfigService.SaveConfig();
             }
@@ -196,17 +190,16 @@ namespace CertBox.ViewModels
                             return;
                         }
 
-                        // Add the keystore path to the list if not already present
                         _searchService.AddKeystorePath(filePath);
                         await _certificateService.LoadCertificatesAsync(filePath);
-                        SelectedFilePath = filePath; // Update the selected path on success
+                        SelectedFilePath = filePath;
                     }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to open keystore file");
                     ShowError($"Failed to open keystore file: {ex.Message}");
-                    SelectedFilePath = string.Empty; // Clear the selected path on failure
+                    SelectedFilePath = string.Empty;
                 }
             }
         }
@@ -272,6 +265,17 @@ namespace CertBox.ViewModels
             _viewState.ErrorMessage = string.Empty;
         }
 
+        [RelayCommand(CanExecute = nameof(CanClearSearch))]
+        private void ClearSearch()
+        {
+            SearchQuery = string.Empty;
+        }
+
+        private bool CanClearSearch()
+        {
+            return !string.IsNullOrEmpty(SearchQuery);
+        }
+
         private bool CanImport()
         {
             return !string.IsNullOrEmpty(SelectedFilePath) && File.Exists(SelectedFilePath);
@@ -319,16 +323,14 @@ namespace CertBox.ViewModels
             if (ConfigureJdkPathRequested != null)
             {
                 var result = await ConfigureJdkPathRequested.Invoke();
-
                 if (!string.IsNullOrEmpty(result))
                 {
                     try
                     {
                         _userConfigService.UpdateJdkPath(result);
-                        var jvmPath = _searchService.GetJVMLibraryPath();
-                        BaseKeystoreSearchService.SetJVMLibraryPath(jvmPath);
                         _logger.LogInformation("JDK path configured successfully: {Path}", result);
 
+                        // Refresh keystore list and reload certificates
                         _searchService.StartSearch();
                         if (!string.IsNullOrEmpty(SelectedFilePath))
                         {
