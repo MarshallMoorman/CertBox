@@ -132,7 +132,7 @@ jobs:
         run: |
           mkdir -p ./publish/CertBox.app/Contents/MacOS
           mkdir -p ./publish/CertBox.app/Contents/Resources
-          cp -r ./publish/${{ matrix.runtime }}/* ./publish/CertBox.app/Contents/MacOS/
+          cp ./publish/${{ matrix.runtime }}/CertBox ./publish/CertBox.app/Contents/MacOS/
           cp src/CertBox/Assets/CertBox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
           cp src/CertBox/Assets/Info.plist ./publish/CertBox.app/Contents/Info.plist
           cp src/CertBox/Assets/CertBox.entitlements ./publish/CertBox.entitlements
@@ -155,18 +155,21 @@ jobs:
 
       - name: Sign macOS .app bundle
         run: |
-          codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+          codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             --entitlements ./publish/CertBox.entitlements \
+            --timestamp \
             ./publish/CertBox.app/Contents/MacOS/CertBox
-          codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+          codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             --entitlements ./publish/CertBox.entitlements \
+            --timestamp \
             ./publish/CertBox.app
 
       - name: Verify signature pre-notarization
         run: |
           codesign -dvv ./publish/CertBox.app
+          codesign --deep-verify -vv ./publish/CertBox.app
 
       - name: Notarize macOS .app bundle
         env:
@@ -280,7 +283,7 @@ jobs:
         run: |
           mkdir -p ./publish/CertBox.app/Contents/MacOS
           mkdir -p ./publish/CertBox.app/Contents/Resources
-          cp -r ./publish/${{ matrix.runtime }}/* ./publish/CertBox.app/Contents/MacOS/
+          cp ./publish/${{ matrix.runtime }}/CertBox ./publish/CertBox.app/Contents/MacOS/
           cp src/CertBox/Assets/CertBox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
           cp src/CertBox/Assets/Info.plist ./publish/CertBox.app/Contents/Info.plist
           cp src/CertBox/Assets/CertBox.entitlements ./publish/CertBox.entitlements
@@ -303,18 +306,21 @@ jobs:
 
       - name: Sign macOS .app bundle
         run: |
-          codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+          codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             --entitlements ./publish/CertBox.entitlements \
+            --timestamp \
             ./publish/CertBox.app/Contents/MacOS/CertBox
-          codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+          codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             --entitlements ./publish/CertBox.entitlements \
+            --timestamp \
             ./publish/CertBox.app
 
       - name: Verify signature pre-notarization
         run: |
           codesign -dvv ./publish/CertBox.app
+          codesign --deep-verify -vv ./publish/CertBox.app
 
       - name: Notarize macOS .app bundle
         env:
