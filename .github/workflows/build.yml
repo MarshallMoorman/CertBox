@@ -128,6 +128,34 @@ jobs:
       - name: Publish CertBox (with trimming disabled)
         run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
 
+      - name: Generate CertBox.icns
+        run: |
+          ICONSET_DIR="certbox.iconset"
+          OUTPUT_ICNS="src/CertBox/Assets/CertBox.icns"
+          if [ ! -f "graphics/certbox_icon.png" ]; then
+            echo "Error: Source file graphics/certbox_icon.png not found."
+            exit 1
+          fi
+          rm -rf "$ICONSET_DIR"
+          mkdir "$ICONSET_DIR"
+          sips -z 16 16   graphics/certbox_icon.png --out "$ICONSET_DIR/icon_16x16.png"
+          sips -z 32 32   graphics/certbox_icon.png --out "$ICONSET_DIR/icon_16x16@2x.png"
+          sips -z 32 32   graphics/certbox_icon.png --out "$ICONSET_DIR/icon_32x32.png"
+          sips -z 64 64   graphics/certbox_icon.png --out "$ICONSET_DIR/icon_32x32@2x.png"
+          sips -z 128 128 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_128x128.png"
+          sips -z 256 256 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_128x128@2x.png"
+          sips -z 256 256 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_256x256.png"
+          sips -z 512 512 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_256x256@2x.png"
+          sips -z 512 512 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_512x512.png"
+          sips -z 1024 1024 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_512x512@2x.png"
+          iconutil -c icns "$ICONSET_DIR" -o "$OUTPUT_ICNS"
+          rm -rf "$ICONSET_DIR"
+          if [ ! -f "$OUTPUT_ICNS" ]; then
+            echo "Error: Failed to generate $OUTPUT_ICNS"
+            exit 1
+          fi
+          echo "Successfully generated $OUTPUT_ICNS"
+
       - name: Create macOS .app bundle
         run: |
           mkdir -p ./publish/CertBox.app/Contents/MacOS
@@ -135,6 +163,10 @@ jobs:
           cp ./publish/${{ matrix.runtime }}/CertBox ./publish/CertBox.app/Contents/MacOS/
           cp ./publish/${{ matrix.runtime }}/lib*.dylib ./publish/CertBox.app/Contents/MacOS/
           cp ./publish/${{ matrix.runtime }}/appsettings.json ./publish/CertBox.app/Contents/Resources/
+          if [ ! -f "src/CertBox/Assets/CertBox.icns" ]; then
+            echo "Error: CertBox.icns not found at src/CertBox/Assets/CertBox.icns"
+            exit 1
+          fi
           cp src/CertBox/Assets/CertBox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
           cp src/CertBox/Assets/Info.plist ./publish/CertBox.app/Contents/Info.plist
           cp src/CertBox/Assets/CertBox.entitlements ./publish/CertBox.entitlements
@@ -301,6 +333,34 @@ jobs:
       - name: Publish CertBox (with trimming disabled)
         run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
 
+      - name: Generate CertBox.icns
+        run: |
+          ICONSET_DIR="certbox.iconset"
+          OUTPUT_ICNS="src/CertBox/Assets/CertBox.icns"
+          if [ ! -f "graphics/certbox_icon.png" ]; then
+            echo "Error: Source file graphics/certbox_icon.png not found."
+            exit 1
+          fi
+          rm -rf "$ICONSET_DIR"
+          mkdir "$ICONSET_DIR"
+          sips -z 16 16   graphics/certbox_icon.png --out "$ICONSET_DIR/icon_16x16.png"
+          sips -z 32 32   graphics/certbox_icon.png --out "$ICONSET_DIR/icon_16x16@2x.png"
+          sips -z 32 32   graphics/certbox_icon.png --out "$ICONSET_DIR/icon_32x32.png"
+          sips -z 64 64   graphics/certbox_icon.png --out "$ICONSET_DIR/icon_32x32@2x.png"
+          sips -z 128 128 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_128x128.png"
+          sips -z 256 256 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_128x128@2x.png"
+          sips -z 256 256 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_256x256.png"
+          sips -z 512 512 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_256x256@2x.png"
+          sips -z 512 512 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_512x512.png"
+          sips -z 1024 1024 graphics/certbox_icon.png --out "$ICONSET_DIR/icon_512x512@2x.png"
+          iconutil -c icns "$ICONSET_DIR" -o "$OUTPUT_ICNS"
+          rm -rf "$ICONSET_DIR"
+          if [ ! -f "$OUTPUT_ICNS" ]; then
+            echo "Error: Failed to generate $OUTPUT_ICNS"
+            exit 1
+          fi
+          echo "Successfully generated $OUTPUT_ICNS"
+
       - name: Create macOS .app bundle
         run: |
           mkdir -p ./publish/CertBox.app/Contents/MacOS
@@ -308,6 +368,10 @@ jobs:
           cp ./publish/${{ matrix.runtime }}/CertBox ./publish/CertBox.app/Contents/MacOS/
           cp ./publish/${{ matrix.runtime }}/lib*.dylib ./publish/CertBox.app/Contents/MacOS/
           cp ./publish/${{ matrix.runtime }}/appsettings.json ./publish/CertBox.app/Contents/Resources/
+          if [ ! -f "src/CertBox/Assets/CertBox.icns" ]; then
+            echo "Error: CertBox.icns not found at src/CertBox/Assets/CertBox.icns"
+            exit 1
+          fi
           cp src/CertBox/Assets/CertBox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
           cp src/CertBox/Assets/Info.plist ./publish/CertBox.app/Contents/Info.plist
           cp src/CertBox/Assets/CertBox.entitlements ./publish/CertBox.entitlements
