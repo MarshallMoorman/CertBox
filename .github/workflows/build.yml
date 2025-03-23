@@ -134,7 +134,6 @@ jobs:
           mkdir -p ./publish/CertBox.app/Contents/Resources
           cp ./publish/${{ matrix.runtime }}/CertBox ./publish/CertBox.app/Contents/MacOS/
           cp ./publish/${{ matrix.runtime }}/lib*.dylib ./publish/CertBox.app/Contents/MacOS/
-          cp ./publish/${{ matrix.runtime }}/*.pdb ./publish/CertBox.app/Contents/MacOS/ 2>/dev/null || true
           cp ./publish/${{ matrix.runtime }}/appsettings.json ./publish/CertBox.app/Contents/Resources/
           cp src/CertBox/Assets/CertBox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
           cp src/CertBox/Assets/Info.plist ./publish/CertBox.app/Contents/Info.plist
@@ -165,19 +164,12 @@ jobs:
               --timestamp \
               "$dylib"
           done
-          for pdb in ./publish/CertBox.app/Contents/MacOS/*.pdb; do
-            codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
-              --options runtime \
-              --entitlements ./publish/CertBox.entitlements \
-              --timestamp \
-              "$pdb"
-          done
           codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             --entitlements ./publish/CertBox.entitlements \
             --timestamp \
             ./publish/CertBox.app/Contents/MacOS/CertBox
-          codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+          codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             --entitlements ./publish/CertBox.entitlements \
             --timestamp \
@@ -266,6 +258,19 @@ jobs:
         with:
           name: CertBox-${{ matrix.artifact-suffix }}-app
           path: ./CertBox-${{ matrix.artifact-suffix }}.app.zip
+          if-no-files-found: error
+
+      - name: Zip macOS debug symbols
+        run: |
+          cd ./publish/${{ matrix.runtime }}
+          zip -r ../../CertBox-${{ matrix.artifact-suffix }}-debug.zip *.pdb
+          cd ../..
+
+      - name: Upload macOS debug symbols as separate artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CertBox-${{ matrix.artifact-suffix }}-debug
+          path: ./CertBox-${{ matrix.artifact-suffix }}-debug.zip
           if-no-files-found: error
 
   build-macos-x64:
@@ -302,7 +307,6 @@ jobs:
           mkdir -p ./publish/CertBox.app/Contents/Resources
           cp ./publish/${{ matrix.runtime }}/CertBox ./publish/CertBox.app/Contents/MacOS/
           cp ./publish/${{ matrix.runtime }}/lib*.dylib ./publish/CertBox.app/Contents/MacOS/
-          cp ./publish/${{ matrix.runtime }}/*.pdb ./publish/CertBox.app/Contents/MacOS/ 2>/dev/null || true
           cp ./publish/${{ matrix.runtime }}/appsettings.json ./publish/CertBox.app/Contents/Resources/
           cp src/CertBox/Assets/CertBox.icns ./publish/CertBox.app/Contents/Resources/CertBox.icns
           cp src/CertBox/Assets/Info.plist ./publish/CertBox.app/Contents/Info.plist
@@ -333,19 +337,12 @@ jobs:
               --timestamp \
               "$dylib"
           done
-          for pdb in ./publish/CertBox.app/Contents/MacOS/*.pdb; do
-            codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
-              --options runtime \
-              --entitlements ./publish/CertBox.entitlements \
-              --timestamp \
-              "$pdb"
-          done
           codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             --entitlements ./publish/CertBox.entitlements \
             --timestamp \
             ./publish/CertBox.app/Contents/MacOS/CertBox
-          codesign --force --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
+          codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             --entitlements ./publish/CertBox.entitlements \
             --timestamp \
@@ -434,6 +431,19 @@ jobs:
         with:
           name: CertBox-${{ matrix.artifact-suffix }}-app
           path: ./CertBox-${{ matrix.artifact-suffix }}.app.zip
+          if-no-files-found: error
+
+      - name: Zip macOS debug symbols
+        run: |
+          cd ./publish/${{ matrix.runtime }}
+          zip -r ../../CertBox-${{ matrix.artifact-suffix }}-debug.zip *.pdb
+          cd ../..
+
+      - name: Upload macOS debug symbols as separate artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CertBox-${{ matrix.artifact-suffix }}-debug
+          path: ./CertBox-${{ matrix.artifact-suffix }}-debug.zip
           if-no-files-found: error
 
   release:
@@ -477,5 +487,7 @@ jobs:
             artifacts/CertBox-macos-x64/CertBox-macos-x64.zip
             artifacts/CertBox-macos-arm64-app/CertBox-macos-arm64.app.zip
             artifacts/CertBox-macos-x64-app/CertBox-macos-x64.app.zip
+            artifacts/CertBox-macos-arm64-debug/CertBox-macos-arm64-debug.zip
+            artifacts/CertBox-macos-x64-debug/CertBox-macos-x64-debug.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
