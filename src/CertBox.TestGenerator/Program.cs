@@ -1,12 +1,6 @@
 // src/CertBox.TestGenerator/Program.cs
 
-using CertBox.Common;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Serilog;
-using Serilog.Core;
-using Constants = CertBox.Common.Constants;
 
 namespace CertBox.TestGenerator
 {
@@ -17,90 +11,90 @@ namespace CertBox.TestGenerator
 
         static void Main(string[] args)
         {
-            _applicationContext = new ApplicationContext(AppDomain.CurrentDomain.BaseDirectory, 5);
-            ConfigureServices();
-            var generator = _serviceProvider!.GetRequiredService<CertificateGenerator>();
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var outputPath = _applicationContext.DefaultKeystorePath;
-            var sampleDir = _applicationContext.DefaultSampleCertsPath;
-            var password = Constants.DefaultKeystorePassword;
-
-            try
-            {
-                // Ensure the output directory exists
-                var outputDir = Path.GetDirectoryName(outputPath);
-                if (outputDir != null && !Directory.Exists(outputDir))
-                {
-                    Directory.CreateDirectory(outputDir);
-                }
-
-                if (File.Exists(outputPath))
-                {
-                    File.Delete(outputPath);
-                }
-
-                generator.GenerateTestKeystore(outputPath, password);
-                _serviceProvider!.GetRequiredService<ILogger<Program>>()
-                    .LogInformation("Test keystore file generated at: {OutputPath}", outputPath);
-
-                // Generate sample certificates
-                generator.GenerateSampleCertificates(sampleDir);
-                _serviceProvider!.GetRequiredService<ILogger<Program>>()
-                    .LogInformation("Sample certificates generated in: {SampleDir}", sampleDir);
-            }
-            catch (Exception ex)
-            {
-                _serviceProvider!.GetRequiredService<ILogger<Program>>().LogError(ex,
-                    "Error generating test keystore file or sample certificates");
-            }
+            // _applicationContext = new ApplicationContext(AppDomain.CurrentDomain.BaseDirectory, 5);
+            // ConfigureServices();
+            // var generator = _serviceProvider!.GetRequiredService<CertificateGenerator>();
+            // var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            // var outputPath = _applicationContext.DefaultKeystorePath;
+            // var sampleDir = _applicationContext.DefaultSampleCertsPath;
+            // var password = Constants.DefaultKeystorePassword;
+            //
+            // try
+            // {
+            //     // Ensure the output directory exists
+            //     var outputDir = Path.GetDirectoryName(outputPath);
+            //     if (outputDir != null && !Directory.Exists(outputDir))
+            //     {
+            //         Directory.CreateDirectory(outputDir);
+            //     }
+            //
+            //     if (File.Exists(outputPath))
+            //     {
+            //         File.Delete(outputPath);
+            //     }
+            //
+            //     generator.GenerateTestKeystore(outputPath, password);
+            //     _serviceProvider!.GetRequiredService<ILogger<Program>>()
+            //         .LogInformation("Test keystore file generated at: {OutputPath}", outputPath);
+            //
+            //     // Generate sample certificates
+            //     generator.GenerateSampleCertificates(sampleDir);
+            //     _serviceProvider!.GetRequiredService<ILogger<Program>>()
+            //         .LogInformation("Sample certificates generated in: {SampleDir}", sampleDir);
+            // }
+            // catch (Exception ex)
+            // {
+            //     _serviceProvider!.GetRequiredService<ILogger<Program>>().LogError(ex,
+            //         "Error generating test keystore file or sample certificates");
+            // }
         }
 
         private static void ConfigureServices()
         {
-            var services = new ServiceCollection();
-
-            // Configuration
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(baseDir)
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .Build();
-
-            // Logging
-            var logPathSection = FindLogPathSection(configuration);
-            if (logPathSection != null)
-            {
-                var logPath = logPathSection.Value;
-
-                if (logPath != null)
-                {
-                    logPathSection.Value = Path.GetFullPath(Path.Combine(baseDir, logPath));
-                }
-            }
-
-            var levelSwitch = new LoggingLevelSwitch();
-            var configLevel = configuration.GetValue<string>("LoggingLevel")?.ToLowerInvariant();
-            levelSwitch.MinimumLevel = configLevel switch
-            {
-                "debug" => Serilog.Events.LogEventLevel.Debug,
-                "warning" => Serilog.Events.LogEventLevel.Warning,
-                "error" => Serilog.Events.LogEventLevel.Error,
-                _ => Serilog.Events.LogEventLevel.Information
-            };
-
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.ControlledBy(levelSwitch)
-                .ReadFrom.Configuration(configuration)
-                .Enrich.FromLogContext()
-                .CreateLogger();
-
-            services.AddLogging(logging => logging.AddSerilog(Log.Logger, dispose: true));
-            services.AddTransient<CertificateGenerator>();
-            services.AddSingleton<IApplicationContext>(_applicationContext);
-            services.AddTransient<ILogger<CertificateGenerator>>(provider =>
-                provider.GetRequiredService<ILoggerFactory>().CreateLogger<CertificateGenerator>());
-
-            _serviceProvider = services.BuildServiceProvider();
+            // var services = new ServiceCollection();
+            //
+            // // Configuration
+            // var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            // var configuration = new ConfigurationBuilder()
+            //     .SetBasePath(baseDir)
+            //     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            //     .Build();
+            //
+            // // Logging
+            // var logPathSection = FindLogPathSection(configuration);
+            // if (logPathSection != null)
+            // {
+            //     var logPath = logPathSection.Value;
+            //
+            //     if (logPath != null)
+            //     {
+            //         logPathSection.Value = Path.GetFullPath(Path.Combine(baseDir, logPath));
+            //     }
+            // }
+            //
+            // var levelSwitch = new LoggingLevelSwitch();
+            // var configLevel = configuration.GetValue<string>("LoggingLevel")?.ToLowerInvariant();
+            // levelSwitch.MinimumLevel = configLevel switch
+            // {
+            //     "debug" => Serilog.Events.LogEventLevel.Debug,
+            //     "warning" => Serilog.Events.LogEventLevel.Warning,
+            //     "error" => Serilog.Events.LogEventLevel.Error,
+            //     _ => Serilog.Events.LogEventLevel.Information
+            // };
+            //
+            // Log.Logger = new LoggerConfiguration()
+            //     .MinimumLevel.ControlledBy(levelSwitch)
+            //     .ReadFrom.Configuration(configuration)
+            //     .Enrich.FromLogContext()
+            //     .CreateLogger();
+            //
+            // services.AddLogging(logging => logging.AddSerilog(Log.Logger, dispose: true));
+            // services.AddTransient<CertificateGenerator>();
+            // services.AddSingleton<IApplicationContext>(_applicationContext);
+            // services.AddTransient<ILogger<CertificateGenerator>>(provider =>
+            //     provider.GetRequiredService<ILoggerFactory>().CreateLogger<CertificateGenerator>());
+            //
+            // _serviceProvider = services.BuildServiceProvider();
         }
 
         private static IConfigurationSection? FindLogPathSection(IConfigurationRoot configuration)

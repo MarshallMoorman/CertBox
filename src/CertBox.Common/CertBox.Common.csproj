@@ -9,7 +9,4 @@
         <PackageReference Include="BouncyCastle.NetCore" Version="2.2.1"/>
         <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.3"/>
     </ItemGroup>
-    <ItemGroup>
-      <Compile Remove="CertificateGenerator.cs" />
-    </ItemGroup>
 </Project>
