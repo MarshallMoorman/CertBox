@@ -161,28 +161,54 @@ jobs:
           DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          # Create variables
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-          # Import certificate from secrets
           echo -n "$DEVELOPER_ID_CERTIFICATE_BASE64" | base64 -d -o $CERTIFICATE_PATH
-
-          # Create temporary keychain
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          # Import certificate to keychain
           security import $CERTIFICATE_PATH -P "$DEVELOPER_ID_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
       - name: Sign macOS .app bundle
         run: |
-          codesign --force --deep --sign "Developer ID Application: Marshall Moorman" \
+          codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             ./publish/CertBox.app
+
+      - name: Notarize macOS .app bundle
+        env:
+          APPSTORE_CONNECT_API_KEY_BASE64: ${{ secrets.APPSTORE_CONNECT_API_KEY_BASE64 }}
+          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+        run: |
+          # Create API key file
+          API_KEY_PATH=$RUNNER_TEMP/AuthKey_${{ secrets.APPSTORE_CONNECT_KEY_ID }}.p8
+          echo -n "$APPSTORE_CONNECT_API_KEY_BASE64" | base64 -d -o $API_KEY_PATH
+
+          # Zip the app for notarization
+          cd ./publish
+          zip -r CertBox-notarize.zip CertBox.app
+
+          # Submit to Apple for notarization
+          xcrun notarytool submit CertBox-notarize.zip \
+            --key $API_KEY_PATH \
+            --key-id "${{ secrets.APPSTORE_CONNECT_KEY_ID }}" \
+            --issuer "${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}" \
+            --wait \
+            --output-format json > notarization-result.json
+
+          # Check notarization status
+          STATUS=$(cat notarization-result.json | jq -r '.status')
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "Notarization failed:"
+            cat notarization-result.json
+            exit 1
+          fi
+
+          # Staple the notarization ticket
+          xcrun stapler staple CertBox.app
 
       - name: Clean up keychain
         if: always()
@@ -276,28 +302,54 @@ jobs:
           DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          # Create variables
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-          # Import certificate from secrets
           echo -n "$DEVELOPER_ID_CERTIFICATE_BASE64" | base64 -d -o $CERTIFICATE_PATH
-
-          # Create temporary keychain
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          # Import certificate to keychain
           security import $CERTIFICATE_PATH -P "$DEVELOPER_ID_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
       - name: Sign macOS .app bundle
         run: |
-          codesign --force --deep --sign "Developer ID Application: Marshall Moorman" \
+          codesign --force --deep --sign "Developer ID Application: Marshall Moorman (C9M8R6BZWV)" \
             --options runtime \
             ./publish/CertBox.app
+
+      - name: Notarize macOS .app bundle
+        env:
+          APPSTORE_CONNECT_API_KEY_BASE64: ${{ secrets.APPSTORE_CONNECT_API_KEY_BASE64 }}
+          APPSTORE_CONNECT_KEY_ID: ${{ secrets.APPSTORE_CONNECT_KEY_ID }}
+          APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+        run: |
+          # Create API key file
+          API_KEY_PATH=$RUNNER_TEMP/AuthKey_${{ secrets.APPSTORE_CONNECT_KEY_ID }}.p8
+          echo -n "$APPSTORE_CONNECT_API_KEY_BASE64" | base64 -d -o $API_KEY_PATH
+
+          # Zip the app for notarization
+          cd ./publish
+          zip -r CertBox-notarize.zip CertBox.app
+
+          # Submit to Apple for notarization
+          xcrun notarytool submit CertBox-notarize.zip \
+            --key $API_KEY_PATH \
+            --key-id "${{ secrets.APPSTORE_CONNECT_KEY_ID }}" \
+            --issuer "${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}" \
+            --wait \
+            --output-format json > notarization-result.json
+
+          # Check notarization status
+          STATUS=$(cat notarization-result.json | jq -r '.status')
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "Notarization failed:"
+            cat notarization-result.json
+            exit 1
+          fi
+
+          # Staple the notarization ticket
+          xcrun stapler staple CertBox.app
 
       - name: Clean up keychain
         if: always()
