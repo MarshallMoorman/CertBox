@@ -84,6 +84,9 @@ jobs:
         with:
           dotnet-version: '9.0.100'
 
+      - name: Install xmllint
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+
       - name: Get version
         id: get_version
         run: |
@@ -132,6 +135,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.100'
+
+      - name: Install xmllint
+        run: brew install libxml2
 
       - name: Get version
         id: get_version
@@ -346,6 +352,9 @@ jobs:
         with:
           dotnet-version: '9.0.100'
 
+      - name: Install xmllint
+        run: brew install libxml2
+
       - name: Get version
         id: get_version
         run: |
@@ -553,6 +562,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install xmllint
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
 
       - name: Get version
         id: get_version
