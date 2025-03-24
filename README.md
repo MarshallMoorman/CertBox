@@ -3,15 +3,14 @@
 CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage certificates in a JDK's `cacerts` file. It allows users to list, import, remove, and replace certificates with a simple, table-based interface featuring search and filter capabilities.
 
 ## Features
-- View all certificate fields (read-only) in a `cacerts` file.
-- Select a `cacerts` file at runtime using a file picker.
+- View all certificate fields (read-only) in a `cacerts` file with a searchable and filterable table-based UI using custom icons and the Inter font.
+- Select a `cacerts` file at runtime using a file picker, with the selected file path displayed in the UI.
 - Import certificates in common formats (`.pem`, `.crt`, `.cer`, `.der`), rejecting expired certificates.
 - Remove or replace existing certificates with selection in a `DataGrid`.
 - Reject expired certificates on import; highlight invalid/expired certificates in red (fixed vertical alignment issue in the `Expiry` column).
 - Highlight expired certificates in the `DataGrid` with a red background for the entire row, using the `IsExpired` property of `CertificateModel` to dynamically apply the `expired` class.
-- Persist user state in `~/.certbox/user_config.json`, including the last opened keystore path, selected theme (dark or light), and window size (width and height).
+- Persist user state in `~/.certbox/user_config.json`, including the last opened keystore path, selected theme (dark or light), and window size (width and height). On Windows, the `.certbox` directory is hidden for a cleaner user experience.
 - Cross-platform support: Windows, Linux, macOS (single-file executables + macOS `.app` bundle).
-- View all certificate fields (read-only) in a `cacerts` file with a searchable and filterable table-based UI using custom icons and the Inter font.
 - Added a fade-in animation for the details pane when a certificate is selected.
 - **UI Enhancements**:
   - Added custom icons for "Deep Search", "Cancel Deep Search", and "Clear Search" buttons using `StreamGeometry` in `Assets/Icons.axaml`.
@@ -26,6 +25,11 @@ CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage cer
   - Improved error handling in `MainWindowViewModel` by adding validation for invalid keystore paths and file access issues, with user-friendly error messages.
   - Introduced a `ViewState` class to manage UI state (`IsErrorPaneVisible`, `IsDeepSearchRunning`, `ErrorMessage`), fixing binding issues for the error pane and deep search progress bar/cancel button.
   - Fixed an `"Uninitialized keystore"` error during import by resetting the keystore state in `CertificateService` and clearing `SelectedFilePath` when loading fails.
+- **JDK Path Configuration**:
+  - Automatically detects the JDK path by searching common locations on each platform (e.g., `/Library/Java/JavaVirtualMachines` on macOS, `/usr/lib/jvm` on Linux, `C:\Program Files\Java` on Windows).
+  - Allows users to manually configure the JDK path via a settings button, storing it in `user_config.json` as `JdkPath`.
+  - Automatically searches for a `cacerts` file in the JDK’s `lib/security` directory after the JDK path is set, adding it to the list of keystores.
+  - Displays an error message at startup if no JDK path is configured, prompting the user to set it via the settings button.
 
 ## Getting Started
 1. Clone the repository: `git clone https://github.com/MarshallMoorman/CertBox.git`
@@ -35,22 +39,22 @@ CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage cer
 
 **Note**: This project is primarily developed on a MacBook Pro M3 Max (Apple Silicon). Ensure the .NET 9 SDK is installed with ARM64 support for development on similar hardware. The app uses a dark theme with colors inspired by the project icon: `#000000` (black) background, `#FFFFFF` (white) text/accents, and `#E0E0E0` (light gray) for secondary elements. The project relies on Avalonia 11.2.5 and CommunityToolkit.Mvvm 8.4.0.
 
-**Finding a `cacerts` File**: CertBox requires a JDK `cacerts` file to operate. This file is typically located in your JDK installation, such as:
+**Finding a `cacerts` File**: CertBox requires a JDK `cacerts` file to operate and a JDK installed on the user’s system to provide the `keytool` utility. The `cacerts` file is typically located in your JDK installation, such as:
 - macOS: `/Library/Java/JavaVirtualMachines/<jdk-version>/Contents/Home/lib/security/cacerts`
 - Windows: `C:\Program Files\Java\<jdk-version>\lib\security\cacerts`
 - Linux: `/usr/lib/jvm/<jdk-version>/lib/security/cacerts`
 The default password for `cacerts` is `"changeit"`. You can select a `cacerts` file at runtime using the file picker in the app. For testing, a sample `cacerts` file and certificates are provided in `tests/resources`.
 
 ## Dependencies
-- **IKVM and IKVM.Image.JDK**: Used to load JKS `cacerts` files via Java’s `java.security.KeyStore`. `IKVM.Image.JDK` embeds a JDK runtime, ensuring users don’t need to install a JDK separately. Both packages are required due to an oversight in package dependencies.
 - **Microsoft.Extensions.DependencyInjection**: Provides dependency injection for services and ViewModels.
 - **Microsoft.Extensions.Logging with Serilog**: Configures logging to a file (`logs/log-.txt`) with daily rolling, controlled via `appsettings.json`.
 - **Microsoft.Extensions.Configuration**: Loads configuration from `appsettings.json`.
 - **BouncyCastle.NetCore**: Used for generating self-signed certificates for testing purposes.
+- **JDK (User-Provided)**: CertBox uses the `keytool` utility (bundled with a JDK) to manage JKS `cacerts` files. Users must have a JDK installed (version 8, 11, 17, or later), and the JDK path must be configured in the app via the settings button or automatically detected.
 
 ## Building
 - Requires .NET 9 SDK.
-- Build for all platforms: `dotnet publish -c Release -r <runtime-id>` (e.g., `win-x64`, `linux-x64`, `osx-x64`).
+- Build for all platforms: `dotnet publish -c Release -r <runtime-id>` (e.g., `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`).
 
 ## Testing
 - A test `cacerts` file and sample certificates (`sample_valid.pem`, `sample_expired.pem`) are generated by the `CertBox.TestGenerator` project. Run the following to generate test data:
