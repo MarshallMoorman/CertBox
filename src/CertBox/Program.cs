@@ -1,3 +1,5 @@
+// src/CertBox/Program.cs
+using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Avalonia;
@@ -24,6 +26,9 @@ namespace CertBox
             _applicationContext = new ApplicationContext(AppDomain.CurrentDomain.BaseDirectory, 6);
             ConfigureServices();
             DebugResources();
+
+            var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+            Log.Information("Starting CertBox version {Version}", version);
 
             try
             {
@@ -106,7 +111,6 @@ namespace CertBox
                     return new WindowsKeystoreFinder(loggerFactory.CreateLogger<WindowsKeystoreFinder>());
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                     return new MacOsKeystoreFinder(loggerFactory.CreateLogger<MacOsKeystoreFinder>());
-
                 return new LinuxKeystoreFinder(loggerFactory.CreateLogger<LinuxKeystoreFinder>());
             });
             services.AddSingleton<IKeystoreSearchService>(provider =>
@@ -127,7 +131,6 @@ namespace CertBox
                         configuration,
                         _applicationContext,
                         userconfiguration);
-
                 return new LinuxKeystoreSearchService(finder,
                     loggerFactory.CreateLogger<LinuxKeystoreSearchService>(),
                     configuration,

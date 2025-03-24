@@ -32,6 +32,15 @@ jobs:
         with:
           dotnet-version: '9.0.100'
 
+      - name: Get version
+        id: get_version
+        shell: powershell
+        run: |
+          $baseVersion = (Select-Xml -Path "src/CertBox/CertBox.csproj" -XPath "//Version").Node.InnerText
+          $fullVersion = "$baseVersion.${{ github.run_number }}"
+          echo "base_version=$baseVersion" >> $env:GITHUB_OUTPUT
+          echo "full_version=$fullVersion" >> $env:GITHUB_OUTPUT
+
       - name: Restore dependencies
         run: dotnet restore CertBox.sln
 
@@ -42,18 +51,18 @@ jobs:
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
 
       - name: Publish CertBox (with trimming disabled)
-        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
+        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:Version=${{ steps.get_version.outputs.full_version }} -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
 
       - name: Zip artifact
         shell: powershell
         run: |
-          Compress-Archive -Path ./publish/${{ matrix.runtime }}/* -DestinationPath ./CertBox-${{ matrix.artifact-suffix }}.zip
+          Compress-Archive -Path ./publish/${{ matrix.runtime }}/* -DestinationPath ./CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.zip
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: CertBox-${{ matrix.artifact-suffix }}
-          path: ./CertBox-${{ matrix.artifact-suffix }}.zip
+          name: CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}
+          path: ./CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.zip
           if-no-files-found: error
 
   build-linux:
@@ -75,6 +84,14 @@ jobs:
         with:
           dotnet-version: '9.0.100'
 
+      - name: Get version
+        id: get_version
+        run: |
+          BASE_VERSION=$(xmllint --xpath "string(//Version)" src/CertBox/CertBox.csproj)
+          FULL_VERSION="${BASE_VERSION}.${{ github.run_number }}"
+          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
+
       - name: Restore dependencies
         run: dotnet restore CertBox.sln
 
@@ -85,19 +102,19 @@ jobs:
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
 
       - name: Publish CertBox (with trimming disabled)
-        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
+        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:Version=${{ steps.get_version.outputs.full_version }} -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
 
       - name: Zip artifact
         run: |
           cd ./publish/${{ matrix.runtime }}
-          zip -r ../../CertBox-${{ matrix.artifact-suffix }}.zip .
+          zip -r ../../CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.zip .
           cd ../..
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: CertBox-${{ matrix.artifact-suffix }}
-          path: ./CertBox-${{ matrix.artifact-suffix }}.zip
+          name: CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}
+          path: ./CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.zip
           if-no-files-found: error
 
   build-macos-arm64:
@@ -116,6 +133,14 @@ jobs:
         with:
           dotnet-version: '9.0.100'
 
+      - name: Get version
+        id: get_version
+        run: |
+          BASE_VERSION=$(xmllint --xpath "string(//Version)" src/CertBox/CertBox.csproj)
+          FULL_VERSION="${BASE_VERSION}.${{ github.run_number }}"
+          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
+
       - name: Restore dependencies
         run: dotnet restore CertBox.sln
 
@@ -126,7 +151,7 @@ jobs:
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
 
       - name: Publish CertBox (with trimming disabled)
-        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
+        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:Version=${{ steps.get_version.outputs.full_version }} -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
 
       - name: Generate CertBox.icns
         run: |
@@ -269,40 +294,40 @@ jobs:
       - name: Zip macOS raw artifact
         run: |
           cd ./publish/${{ matrix.runtime }}
-          zip -r ../../CertBox-${{ matrix.artifact-suffix }}.zip .
+          zip -r ../../CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.zip .
           cd ../..
 
       - name: Upload macOS raw artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CertBox-${{ matrix.artifact-suffix }}
-          path: ./CertBox-${{ matrix.artifact-suffix }}.zip
+          name: CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}
+          path: ./CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.zip
           if-no-files-found: error
 
       - name: Zip macOS .app bundle
         run: |
           cd ./publish
-          zip -r CertBox-${{ matrix.artifact-suffix }}.app.zip CertBox.app
-          mv CertBox-${{ matrix.artifact-suffix }}.app.zip ../
+          zip -r CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.app.zip CertBox.app
+          mv CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.app.zip ../
 
       - name: Upload macOS .app bundle as separate artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CertBox-${{ matrix.artifact-suffix }}-app
-          path: ./CertBox-${{ matrix.artifact-suffix }}.app.zip
+          name: CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}-app
+          path: ./CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.app.zip
           if-no-files-found: error
 
       - name: Zip macOS debug symbols
         run: |
           cd ./publish/${{ matrix.runtime }}
-          zip -r ../../CertBox-${{ matrix.artifact-suffix }}-debug.zip *.pdb
+          zip -r ../../CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}-debug.zip *.pdb
           cd ../..
 
       - name: Upload macOS debug symbols as separate artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CertBox-${{ matrix.artifact-suffix }}-debug
-          path: ./CertBox-${{ matrix.artifact-suffix }}-debug.zip
+          name: CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}-debug
+          path: ./CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}-debug.zip
           if-no-files-found: error
 
   build-macos-x64:
@@ -321,6 +346,14 @@ jobs:
         with:
           dotnet-version: '9.0.100'
 
+      - name: Get version
+        id: get_version
+        run: |
+          BASE_VERSION=$(xmllint --xpath "string(//Version)" src/CertBox/CertBox.csproj)
+          FULL_VERSION="${BASE_VERSION}.${{ github.run_number }}"
+          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
+
       - name: Restore dependencies
         run: dotnet restore CertBox.sln
 
@@ -331,7 +364,7 @@ jobs:
         run: dotnet test CertBox.sln --configuration Release --no-build --verbosity normal
 
       - name: Publish CertBox (with trimming disabled)
-        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
+        run: dotnet publish src/CertBox/CertBox.csproj --configuration Release --runtime ${{ matrix.runtime }} --self-contained true -p:Version=${{ steps.get_version.outputs.full_version }} -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=portable -o ./publish/${{ matrix.runtime }}
 
       - name: Generate CertBox.icns
         run: |
@@ -474,40 +507,40 @@ jobs:
       - name: Zip macOS raw artifact
         run: |
           cd ./publish/${{ matrix.runtime }}
-          zip -r ../../CertBox-${{ matrix.artifact-suffix }}.zip .
+          zip -r ../../CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.zip .
           cd ../..
 
       - name: Upload macOS raw artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CertBox-${{ matrix.artifact-suffix }}
-          path: ./CertBox-${{ matrix.artifact-suffix }}.zip
+          name: CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}
+          path: ./CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.zip
           if-no-files-found: error
 
       - name: Zip macOS .app bundle
         run: |
           cd ./publish
-          zip -r CertBox-${{ matrix.artifact-suffix }}.app.zip CertBox.app
-          mv CertBox-${{ matrix.artifact-suffix }}.app.zip ../
+          zip -r CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.app.zip CertBox.app
+          mv CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.app.zip ../
 
       - name: Upload macOS .app bundle as separate artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CertBox-${{ matrix.artifact-suffix }}-app
-          path: ./CertBox-${{ matrix.artifact-suffix }}.app.zip
+          name: CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}-app
+          path: ./CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}.app.zip
           if-no-files-found: error
 
       - name: Zip macOS debug symbols
         run: |
           cd ./publish/${{ matrix.runtime }}
-          zip -r ../../CertBox-${{ matrix.artifact-suffix }}-debug.zip *.pdb
+          zip -r ../../CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}-debug.zip *.pdb
           cd ../..
 
       - name: Upload macOS debug symbols as separate artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CertBox-${{ matrix.artifact-suffix }}-debug
-          path: ./CertBox-${{ matrix.artifact-suffix }}-debug.zip
+          name: CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}-debug
+          path: ./CertBox-${{ matrix.artifact-suffix }}-${{ steps.get_version.outputs.full_version }}-debug.zip
           if-no-files-found: error
 
   release:
@@ -521,14 +554,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get release count
-        id: release_count
+      - name: Get version
+        id: get_version
         run: |
-          RELEASE_COUNT=$(gh api repos/MarshallMoorman/CertBox/releases --jq 'length')
-          NEXT_RELEASE=$((RELEASE_COUNT + 1))
-          echo "release_number=$NEXT_RELEASE" >> $GITHUB_OUTPUT
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_VERSION=$(xmllint --xpath "string(//Version)" src/CertBox/CertBox.csproj)
+          FULL_VERSION="${BASE_VERSION}.${{ github.run_number }}"
+          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -538,20 +570,20 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.release_count.outputs.release_number }}
-          name: CertBox Release v${{ steps.release_count.outputs.release_number }}
+          tag_name: v${{ steps.get_version.outputs.full_version }}
+          name: CertBox Release v${{ steps.get_version.outputs.full_version }}
           draft: false
           prerelease: false
           files: |
-            artifacts/CertBox-win-x64/CertBox-win-x64.zip
-            artifacts/CertBox-win-arm64/CertBox-win-arm64.zip
-            artifacts/CertBox-linux-x64/CertBox-linux-x64.zip
-            artifacts/CertBox-linux-arm64/CertBox-linux-arm64.zip
-            artifacts/CertBox-macos-arm64/CertBox-macos-arm64.zip
-            artifacts/CertBox-macos-x64/CertBox-macos-x64.zip
-            artifacts/CertBox-macos-arm64-app/CertBox-macos-arm64.app.zip
-            artifacts/CertBox-macos-x64-app/CertBox-macos-x64.app.zip
-            artifacts/CertBox-macos-arm64-debug/CertBox-macos-arm64-debug.zip
-            artifacts/CertBox-macos-x64-debug/CertBox-macos-x64-debug.zip
+            artifacts/CertBox-win-x64-${{ steps.get_version.outputs.full_version }}/CertBox-win-x64-${{ steps.get_version.outputs.full_version }}.zip
+            artifacts/CertBox-win-arm64-${{ steps.get_version.outputs.full_version }}/CertBox-win-arm64-${{ steps.get_version.outputs.full_version }}.zip
+            artifacts/CertBox-linux-x64-${{ steps.get_version.outputs.full_version }}/CertBox-linux-x64-${{ steps.get_version.outputs.full_version }}.zip
+            artifacts/CertBox-linux-arm64-${{ steps.get_version.outputs.full_version }}/CertBox-linux-arm64-${{ steps.get_version.outputs.full_version }}.zip
+            artifacts/CertBox-macos-arm64-${{ steps.get_version.outputs.full_version }}/CertBox-macos-arm64-${{ steps.get_version.outputs.full_version }}.zip
+            artifacts/CertBox-macos-x64-${{ steps.get_version.outputs.full_version }}/CertBox-macos-x64-${{ steps.get_version.outputs.full_version }}.zip
+            artifacts/CertBox-macos-arm64-${{ steps.get_version.outputs.full_version }}-app/CertBox-macos-arm64-${{ steps.get_version.outputs.full_version }}.app.zip
+            artifacts/CertBox-macos-x64-${{ steps.get_version.outputs.full_version }}-app/CertBox-macos-x64-${{ steps.get_version.outputs.full_version }}.app.zip
+            artifacts/CertBox-macos-arm64-${{ steps.get_version.outputs.full_version }}-debug/CertBox-macos-arm64-${{ steps.get_version.outputs.full_version }}-debug.zip
+            artifacts/CertBox-macos-x64-${{ steps.get_version.outputs.full_version }}-debug/CertBox-macos-x64-${{ steps.get_version.outputs.full_version }}-debug.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
