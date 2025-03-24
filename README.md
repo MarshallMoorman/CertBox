@@ -9,27 +9,25 @@ CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage cer
 - Remove or replace existing certificates with selection in a `DataGrid`.
 - Reject expired certificates on import; highlight invalid/expired certificates in red (fixed vertical alignment issue in the `Expiry` column).
 - Highlight expired certificates in the `DataGrid` with a red background for the entire row, using the `IsExpired` property of `CertificateModel` to dynamically apply the `expired` class.
-- Persist user state in `~/.certbox/user_config.json`, including the last opened keystore path, selected theme (dark or light), and window size (width and height). On Windows, the `.certbox` directory is hidden for a cleaner user experience.
+- Persist user state in `~/.certbox/user_config.json`, including the last opened keystore path, selected theme (dark or light), window size (width and height), and JDK path. On Windows, the `.certbox` directory is hidden for a cleaner user experience.
 - Cross-platform support: Windows, Linux, macOS (single-file executables + macOS `.app` bundle).
 - Added a fade-in animation for the details pane when a certificate is selected.
 - **UI Enhancements**:
   - Added custom icons for "Deep Search", "Cancel Deep Search", and "Clear Search" buttons using `StreamGeometry` in `Assets/Icons.axaml`.
   - Implemented a details pane that appears when a certificate is selected, taking 1/4 of the window width, with the `DataGrid` taking 3/4. When no certificate is selected, the details pane and splitter are hidden, and the `DataGrid` takes 100% width.
   - Adjusted `GridSplitter` styling to be less harsh: set thickness to 1 pixel, increased opacity to 1.0, and added margins via adjacent elements (`DataGrid`, `ListBox`, details pane) to create visual gaps.
-  - Fixed vertical splitter resizing by using `ColumnDefinitions="3*,Auto,1*"` and moving margins to adjacent elements.
   - Added a style targeting the `DataGrid` named `CertificateList` using `DataGrid#CertificateList` to apply a darker background (`#1A1A1A`) and thicker border (2 pixels).
 - **Drag-and-Drop Support**:
   - Added drag-and-drop functionality to open keystores by dropping files onto the `KeystoreList` and import certificates by dropping files onto the `CertificateList`.
-  - Implemented visual feedback for drag-and-drop with a green border around the `KeystoreList` and `CertificateList` during drag-over, using `DragOver` and `DragLeave` events in the code-behind.
-- **Error Handling and State Management**:
-  - Improved error handling in `MainWindowViewModel` by adding validation for invalid keystore paths and file access issues, with user-friendly error messages.
-  - Introduced a `ViewState` class to manage UI state (`IsErrorPaneVisible`, `IsDeepSearchRunning`, `ErrorMessage`), fixing binding issues for the error pane and deep search progress bar/cancel button.
-  - Fixed an `"Uninitialized keystore"` error during import by resetting the keystore state in `CertificateService` and clearing `SelectedFilePath` when loading fails.
+  - Implemented visual feedback for drag-and-drop with a green border around the `KeystoreList` and `CertificateList` during drag-over.
 - **JDK Path Configuration**:
   - Automatically detects the JDK path by searching common locations on each platform (e.g., `/Library/Java/JavaVirtualMachines` on macOS, `/usr/lib/jvm` on Linux, `C:\Program Files\Java` on Windows).
   - Allows users to manually configure the JDK path via a settings button, storing it in `user_config.json` as `JdkPath`.
   - Automatically searches for a `cacerts` file in the JDK’s `lib/security` directory after the JDK path is set, adding it to the list of keystores.
   - Displays an error message at startup if no JDK path is configured, prompting the user to set it via the settings button.
+- **macOS-Specific Features**:
+  - Prompts for Full Disk Access on macOS to allow searching the entire filesystem for keystores. If access is denied, a dialog guides the user to enable Full Disk Access in System Settings > Privacy & Security.
+  - Uses a custom-generated `CertBox.icns` file for the macOS app icon, created from `graphics/certbox_icon.png` during the build process.
 
 ## Getting Started
 1. Clone the repository: `git clone https://github.com/MarshallMoorman/CertBox.git`
@@ -43,7 +41,9 @@ CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage cer
 - macOS: `/Library/Java/JavaVirtualMachines/<jdk-version>/Contents/Home/lib/security/cacerts`
 - Windows: `C:\Program Files\Java\<jdk-version>\lib\security\cacerts`
 - Linux: `/usr/lib/jvm/<jdk-version>/lib/security/cacerts`
-The default password for `cacerts` is `"changeit"`. You can select a `cacerts` file at runtime using the file picker in the app. For testing, a sample `cacerts` file and certificates are provided in `tests/resources`.
+The default password for `cacerts` is `"changeit"`. You can select a `cacerts` file at runtime using the file picker in the app, or CertBox will attempt to find one in your JDK’s `lib/security` directory if the JDK path is configured. For testing, a sample `cacerts` file and certificates are provided in `tests/resources`.
+
+**macOS Full Disk Access**: On macOS, CertBox requires Full Disk Access to search the entire filesystem for keystores. On first launch, it will prompt for access to a protected location (e.g., Desktop). If denied, a dialog will guide you to enable Full Disk Access in System Settings > Privacy & Security > Full Disk Access. After granting access, restart CertBox.
 
 ## Dependencies
 - **Microsoft.Extensions.DependencyInjection**: Provides dependency injection for services and ViewModels.
@@ -55,6 +55,7 @@ The default password for `cacerts` is `"changeit"`. You can select a `cacerts` f
 ## Building
 - Requires .NET 9 SDK.
 - Build for all platforms: `dotnet publish -c Release -r <runtime-id>` (e.g., `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`).
+- On macOS, the build process generates a `.app` bundle with a custom icon (`CertBox.icns`) created from `graphics/certbox_icon.png` using `sips` and `iconutil`.
 
 ## Testing
 - A test `cacerts` file and sample certificates (`sample_valid.pem`, `sample_expired.pem`) are generated by the `CertBox.TestGenerator` project. Run the following to generate test data:
