@@ -396,6 +396,33 @@ namespace CertBox.ViewModels
                 _logger.LogInformation("Removed certificate with alias: {Alias}", alias);
                 SelectedCertificate = null;
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "File system access denied during Import. Prompting user for Full Disk Access and App Management.");
+                if (ShowMessageBoxRequested != null && RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    await ShowMessageBoxRequested.Invoke(
+                        "Full Disk Access Required",
+                        "CertBox needs Full Disk Access to remove certificates for some keystores on your system.\n\n" +
+                        "Please go to System Settings > Privacy & Security > Full Disk Access, " +
+                        "and enable access for CertBox.\n\n" +
+                        "Click OK to continue, then restart CertBox after granting access.",
+                        MessageBoxButtons.Ok
+                    );
+
+                    if (SelectedFilePath.Contains("/Applications/"))
+                    {
+                        await ShowMessageBoxRequested.Invoke(
+                            "App Management Required",
+                            "CertBox needs App Management permissions to remove certificates for keystores included in an Application Bundle.\n\n" +
+                            "Please go to System Settings > Privacy & Security > App Management, " +
+                            "and enable access for CertBox.\n\n" +
+                            "Click OK to continue, then restart CertBox after granting access.",
+                            MessageBoxButtons.Ok
+                        );
+                    }
+                }
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error removing certificate");

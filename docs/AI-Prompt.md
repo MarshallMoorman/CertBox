@@ -54,6 +54,7 @@ The app now features a table-based UI with custom icons, Inter font support, sea
   - Fixed a local build issue where the script failed to copy the bundle to `/Applications` by adding a step to delete the existing bundle first.
   - Ensured the `ApplicationIcon` in `CertBox.csproj` is set to `Assets/certbox.ico` for all platforms, as the C# compiler expects a `.ico` file. macOS uses `Info.plist` and `Contents/Resources/CertBox.icns` for its icon, avoiding a `CS7065` error caused by using an `.icns` file in `ApplicationIcon`.
   - Added a custom `MessageBox` implementation to handle permission prompts (e.g., Full Disk Access denial on macOS), with dynamic sizing based on content, a `ScrollViewer` for long messages, and `MaxWidth`/`MaxHeight` set to 80% of the main window’s size.
+  - Enabled the app sandbox (`com.apple.security.app-sandbox`) to ensure macOS correctly recognizes the `com.apple.security.files.all` entitlement and prompts for Full Disk Access during deep search, rather than individual folder access.
 - **Versioning**: Updated to use a hybrid `1.0.0.XXXX` scheme (base version in `CertBox.csproj`, build number from GitHub Actions run number). Displayed in the status bar and artifact names (e.g., `CertBox-win-x64-1.0.0.65.zip`). Old releases/tags/runs prior to `v1.0.0.65` removed via `gh` scripts.
 
 **Response Style Guide**:

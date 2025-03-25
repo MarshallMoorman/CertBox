@@ -10,6 +10,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CertBox.TestGenerator", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CertBox.Tests", "tests\CertBox.Tests\CertBox.Tests.csproj", "{D9952F8D-87F8-4D5D-A066-95BE1C0DC223}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "External", "External", "{BEBF8638-BB5A-43AB-AD80-8018736D9DEA}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+		docs\AI-Prompt.md = docs\AI-Prompt.md
+		generate_icns.sh = generate_icns.sh
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

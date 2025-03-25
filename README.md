@@ -30,8 +30,7 @@ CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage cer
 - **macOS-Specific Features**:
   - Prompts for Full Disk Access on macOS to allow searching the entire filesystem for keystores. If access is denied, a dialog guides the user to enable Full Disk Access in System Settings > Privacy & Security.
   - Uses a custom-generated `CertBox.icns` file for the macOS app icon, created from `graphics/certbox_icon.png` during the build process.
-  - **Full Disk Access Note**: CertBox will appear in System Settings > Privacy & Security > Full Disk Access after the first attempt to perform a deep search. 
-  - **App Management Note**: If CertBox needs to modify a keystore file within another application’s bundle (e.g., another app’s JDK), macOS will prompt for "App Management" permission, which must be granted separately.
+  - **Full Disk Access Note**: CertBox is a sandboxed app with the `com.apple.security.files.all` entitlement to request Full Disk Access. It will appear in System Settings > Privacy & Security > Full Disk Access after the first attempt to perform a deep search. Users can pre-grant Full Disk Access before initiating a deep search to avoid prompts during operation. If CertBox needs to modify a keystore file within another application’s bundle (e.g., another app’s JDK), macOS will prompt for "App Management" permission, which must be granted separately.
 
 ## Getting Started
 1. Clone the repository: `git clone https://github.com/MarshallMoorman/CertBox.git`
@@ -48,6 +47,21 @@ CertBox is a cross-platform tool built with Avalonia UI and .NET 9 to manage cer
 The default password for `cacerts` is `"changeit"`. You can select a `cacerts` file at runtime using the file picker in the app, or CertBox will attempt to find one in your JDK’s `lib/security` directory if the JDK path is configured. For testing, a sample `cacerts` file and certificates are provided in `tests/resources`.
 
 **macOS Full Disk Access**: On macOS, CertBox requires Full Disk Access to search the entire filesystem for keystores. On first launch, it will prompt for access to a protected location (e.g., Desktop). If denied, a dialog will guide you to enable Full Disk Access in System Settings > Privacy & Security > Full Disk Access. After granting access, restart CertBox.
+
+**Resetting Permissions on macOS**: If you need to reset permissions for CertBox (e.g., for testing Full Disk Access prompts), use the `tccutil` command to clear permissions in the macOS TCC database. The process to reset depends on how you run CertBox:
+- **Running as a `.app` Bundle**: If running CertBox as a macOS `.app` bundle (e.g., after building with `dotnet publish` and creating the bundle), reset permissions for CertBox’s bundle identifier:
+  ```bash
+  tccutil reset All com.marshallmoorman.certbox
+  ```
+- **Running from Rider**: If running CertBox from JetBrains Rider, permissions are tied to Rider’s bundle identifier:
+  ```bash
+  tccutil reset All com.jetbrains.rider
+  ```
+- **Running with `dotnet run`**: If running CertBox via `dotnet run`, permissions are tied to the `dotnet` CLI:
+  ```bash
+  tccutil reset All com.microsoft.dotnet
+  ```
+Run the appropriate command based on your execution method to clear all permissions (e.g., Desktop access, Full Disk Access) and test permission prompts from a clean state.
 
 ## Dependencies
 - **Microsoft.Extensions.DependencyInjection**: Provides dependency injection for services and ViewModels.
