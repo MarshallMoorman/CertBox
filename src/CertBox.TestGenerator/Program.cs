@@ -1,5 +1,3 @@
-// src/CertBox.TestGenerator/Program.cs
-
 using Microsoft.Extensions.Configuration;
 
 namespace CertBox.TestGenerator

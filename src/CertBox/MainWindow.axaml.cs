@@ -1,7 +1,10 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using CertBox.Common;
+using CertBox.Models;
 using CertBox.Services;
 using CertBox.ViewModels;
 using CertBox.Views;
@@ -84,6 +87,62 @@ namespace CertBox
                 });
 
                 return folder.Count > 0 ? folder[0].TryGetLocalPath() ?? string.Empty : string.Empty;
+            };
+
+            viewModel.ShowMessageBoxRequested += async (title, message, buttons) =>
+            {
+                return await MessageBox.Show(this, title, message, buttons);
+            };
+            
+            viewModel.OpenLogsDirectoryRequested += () =>
+            {
+                try
+                {
+                    // Logs directory is at "logs/" relative to the app's base directory
+                    string logsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+                    if (!Directory.Exists(logsPath))
+                    {
+                        _logger.LogWarning("Logs directory does not exist: {Path}", logsPath);
+                        return;
+                    }
+
+                    // Open the logs directory using the platform's default file manager
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "explorer.exe",
+                            Arguments = logsPath,
+                            UseShellExecute = true
+                        });
+                    }
+                    else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "open",
+                            Arguments = $"\"{logsPath}\"",
+                            UseShellExecute = true
+                        });
+                    }
+                    else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "xdg-open",
+                            Arguments = $"\"{logsPath}\"",
+                            UseShellExecute = true
+                        });
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Unsupported platform for opening logs directory.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to open logs directory");
+                }
             };
 
             Loaded += async (s, e) => await viewModel.InitializeAsync();
@@ -170,7 +229,6 @@ namespace CertBox
 
         private async Task<string> ShowFilePickerAsync(string title, FilePickerFileType fileType,
             string suggestedFileName = "")
-
         {
             var topLevel = TopLevel.GetTopLevel(this);
             if (topLevel == null)

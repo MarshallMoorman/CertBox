@@ -30,6 +30,8 @@ The app now features a table-based UI with custom icons, Inter font support, sea
   - Added a style targeting the `DataGrid` named `CertificateList` using `DataGrid#CertificateList` to apply a darker background (`#1A1A1A`) and thicker border (2 pixels).
   - Set margins programmatically in `MainWindow.axaml.cs` for the `DataGrid` and details pane to create gaps around the vertical splitter.
   - Removed orphaned `DataGridCell` styles from `Controls.axaml` after introducing a custom `ControlTheme` for `DataGridCell` to fix the selected cell border issue.
+  - Added version display (e.g., `1.0.0.65`) in the status bar via `MainWindowViewModel`.
+  - Added a button in the header to open the logs directory (`logs/`) in the default file manager (Finder on macOS, Explorer on Windows, etc.), using the `Icon.OpenLogs` icon with a tooltip "Open Logs".
 - **Refactoring and State Management**:
   - Refactored `MainWindowViewModel.cs` to improve error handling by adding validation for invalid keystore paths and file access issues, showing specific error messages to the user.
   - Introduced a `ViewState` class to manage UI state properties (`IsErrorPaneVisible`, `IsDeepSearchRunning`, `ErrorMessage`), encapsulating state management and fixing binding issues by propagating `PropertyChanged` events from `ViewState` to `MainWindowViewModel`.
@@ -51,6 +53,8 @@ The app now features a table-based UI with custom icons, Inter font support, sea
   - Implemented icon generation for macOS using a script (`generate_icns.sh`) that converts `graphics/certbox_icon.png` into `src/CertBox/Assets/CertBox.icns` with all required sizes (16x16 to 1024x1024). The script is integrated into both local and CI builds.
   - Fixed a local build issue where the script failed to copy the bundle to `/Applications` by adding a step to delete the existing bundle first.
   - Ensured the `ApplicationIcon` in `CertBox.csproj` is set to `Assets/certbox.ico` for all platforms, as the C# compiler expects a `.ico` file. macOS uses `Info.plist` and `Contents/Resources/CertBox.icns` for its icon, avoiding a `CS7065` error caused by using an `.icns` file in `ApplicationIcon`.
+  - Added a custom `MessageBox` implementation to handle permission prompts (e.g., Full Disk Access denial on macOS), with dynamic sizing based on content, a `ScrollViewer` for long messages, and `MaxWidth`/`MaxHeight` set to 80% of the main window’s size.
+- **Versioning**: Updated to use a hybrid `1.0.0.XXXX` scheme (base version in `CertBox.csproj`, build number from GitHub Actions run number). Displayed in the status bar and artifact names (e.g., `CertBox-win-x64-1.0.0.65.zip`). Old releases/tags/runs prior to `v1.0.0.65` removed via `gh` scripts.
 
 **Response Style Guide**:
 - When providing content in a codeblock that is markdown content (e.g., a markdown file like `README.md` or `AI-Prompt.md`), use `~~~` instead of ` ``` ` to start and end inner codeblocks within the main markdown codeblock. This avoids rendering issues in browsers due to nested codeblock delimiters. The user will manually convert `~~~` to ` ``` ` on their end. For example:
@@ -67,7 +71,7 @@ The app now features a table-based UI with custom icons, Inter font support, sea
   ```
 - Apply this style consistently to all responses involving markdown content with nested codeblocks.
 
-Current date: March 24, 2025. Knowledge is continuously updated.
+Current date: March 25, 2025. Knowledge is updated continuously.
 
 The current code is pushed to my GitHub account: https://github.com/MarshallMoorman/CertBox. Review it to have context of all the code in the project. Do NOT make assumptions about what code is in the project. If you need to see any specific file in the tree, you must ask for it instead of making an assumption.
 

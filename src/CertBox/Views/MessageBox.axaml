@@ -1,0 +1,17 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="CertBox.Views.MessageBox"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+    <StackPanel Margin="10" Spacing="10" Name="MainStackPanel">
+        <ScrollViewer MaxHeight="400" VerticalScrollBarVisibility="Auto">
+            <TextBlock x:Name="MessageTextBlock" 
+                       Text="{Binding Message}" 
+                       TextWrapping="Wrap" />
+        </ScrollViewer>
+        <StackPanel Name="ButtonPanel" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Center" 
+                    Spacing="10" />
+    </StackPanel>
+</Window>

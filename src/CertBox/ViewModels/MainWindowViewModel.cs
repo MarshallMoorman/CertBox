@@ -1,4 +1,7 @@
+using System;
 using System.Collections.ObjectModel;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using CertBox.Common;
 using CertBox.Models;
@@ -32,6 +35,9 @@ namespace CertBox.ViewModels
 
         [ObservableProperty]
         private string _selectedFilePath = string.Empty;
+
+        [ObservableProperty]
+        private string _version;
 
         [NotifyCanExecuteChangedFor(nameof(RemoveCommand))]
         [ObservableProperty]
@@ -131,6 +137,9 @@ namespace CertBox.ViewModels
                 SelectedFilePath = DefaultKeystorePath;
             }
 
+            Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+            _logger.LogInformation("Initialized MainWindowViewModel with version {Version}", Version);
+
             _searchService.StartSearch();
 
             PropertyChanged += OnPropertyChanged;
@@ -218,13 +227,61 @@ namespace CertBox.ViewModels
         [RelayCommand]
         private async Task StartDeepSearch()
         {
+            // Check filesystem access on macOS
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                await CheckFileSystemAccess();
+            }
             await _deepSearchService.StartDeepSearch();
+        }
+
+        private async Task CheckFileSystemAccess()
+        {
+            try
+            {
+                // Attempt to access a protected location to trigger a macOS permission prompt
+                string desktopPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Desktop");
+                if (Directory.Exists(desktopPath))
+                {
+                    // Try reading a file or directory to trigger the prompt
+                    Directory.GetFiles(desktopPath);
+                    _logger.LogInformation("Successfully accessed Desktop folder. File system access granted.");
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "File system access denied. Prompting user for Full Disk Access.");
+                if (ShowMessageBoxRequested != null && RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    await ShowMessageBoxRequested.Invoke(
+                        "Full Disk Access Required",
+                        "CertBox needs Full Disk Access to search for keystores on your system.\n\n" +
+                        "Please go to System Settings > Privacy & Security > Full Disk Access, " +
+                        "and enable access for CertBox.\n\n" +
+                        "Click OK to continue, then restart CertBox after granting access.",
+                        MessageBoxButtons.Ok
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while checking file system access.");
+            }
         }
 
         [RelayCommand]
         private void CancelDeepSearch()
         {
             _deepSearchService.CancelDeepSearch();
+        }
+
+        [RelayCommand]
+        private void OpenLogsDirectory()
+        {
+            if (OpenLogsDirectoryRequested != null)
+            {
+                OpenLogsDirectoryRequested.Invoke();
+            }
         }
 
         public event Func<Task<string>>? OpenFilePickerRequested;
@@ -238,12 +295,14 @@ namespace CertBox.ViewModels
                 ShowError("No keystore loaded for import.");
                 return;
             }
+            
+            string certPath = string.Empty;
 
             try
             {
                 if (ImportCertificateRequested != null)
                 {
-                    var certPath = await ImportCertificateRequested.Invoke();
+                    certPath = await ImportCertificateRequested.Invoke();
                     if (!string.IsNullOrEmpty(certPath))
                     {
                         if (!File.Exists(certPath))
@@ -253,11 +312,38 @@ namespace CertBox.ViewModels
                             return;
                         }
 
-                        var cert = X509CertificateLoader.LoadCertificate(File.ReadAllBytes(certPath));
+                        var cert = X509CertificateLoader.LoadCertificate(File. ReadAllBytes(certPath));
                         var alias = Path.GetFileNameWithoutExtension(certPath);
                         _certificateService.ImportCertificate(alias, cert);
                         await _certificateService.LoadCertificatesAsync(SelectedFilePath);
                         _logger.LogInformation("Imported certificate with alias: {Alias}", alias);
+                    }
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "File system access denied during Import. Prompting user for Full Disk Access and App Management.");
+                if (ShowMessageBoxRequested != null && RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    await ShowMessageBoxRequested.Invoke(
+                        "Full Disk Access Required",
+                        "CertBox needs Full Disk Access to import certificates for some keystores on your system.\n\n" +
+                        "Please go to System Settings > Privacy & Security > Full Disk Access, " +
+                        "and enable access for CertBox.\n\n" +
+                        "Click OK to continue, then restart CertBox after granting access.",
+                        MessageBoxButtons.Ok
+                    );
+
+                    if (certPath.Contains("/Applications/"))
+                    {
+                        await ShowMessageBoxRequested.Invoke(
+                            "App Management Required",
+                            "CertBox needs App Management permissions to import certificates for keystores included in an Application Bundle.\n\n" +
+                            "Please go to System Settings > Privacy & Security > App Management, " +
+                            "and enable access for CertBox.\n\n" +
+                            "Click OK to continue, then restart CertBox after granting access.",
+                            MessageBoxButtons.Ok
+                        );
                     }
                 }
             }
@@ -372,6 +458,8 @@ namespace CertBox.ViewModels
 
         public event Func<Task<string>>? ImportCertificateRequested;
         public event Func<Task<string>>? ConfigureJdkPathRequested;
+        public event Func<string, string, MessageBoxButtons, Task<MessageBoxResult>>? ShowMessageBoxRequested;
+        public event Action? OpenLogsDirectoryRequested;
 
         public void ShowError(string message)
         {
