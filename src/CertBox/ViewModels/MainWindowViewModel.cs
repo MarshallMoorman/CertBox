@@ -240,7 +240,7 @@ namespace CertBox.ViewModels
             try
             {
                 // Attempt to access a protected location to trigger a macOS permission prompt
-                string desktopPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Desktop");
+                string desktopPath = "/Library";
                 if (Directory.Exists(desktopPath))
                 {
                     // Try reading a file or directory to trigger the prompt

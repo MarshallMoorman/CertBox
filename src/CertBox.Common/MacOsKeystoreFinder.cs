@@ -38,11 +38,7 @@ namespace CertBox.Common
             "/Volumes",
             "/private/tmp",
             "/private/var",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Desktop"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Documents"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library/Developer")
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget")
         };
 
         public MacOsKeystoreFinder(ILogger<MacOsKeystoreFinder> logger)
