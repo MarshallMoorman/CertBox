@@ -99,7 +99,7 @@ namespace CertBox
                 try
                 {
                     // Logs directory is at "logs/" relative to the app's base directory
-                    string logsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+                    string logsPath = _applicationContext.LogPath;
                     if (!Directory.Exists(logsPath))
                     {
                         _logger.LogWarning("Logs directory does not exist: {Path}", logsPath);

@@ -15,16 +15,18 @@ namespace CertBox.Services
     {
         private readonly ILogger<CertificateService> _logger;
         private readonly IKeystoreSearchService _keystoreSearchService;
+        private readonly IApplicationContext _applicationContext;
         private readonly ObservableCollection<CertificateModel> _allCertificates;
         private string? _currentPath;
         private string? _currentPassword;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public CertificateService(ILogger<CertificateService> logger, IKeystoreSearchService keystoreSearchService)
+        public CertificateService(ILogger<CertificateService> logger, IKeystoreSearchService keystoreSearchService, IApplicationContext applicationContext)
         {
             _logger = logger;
             _keystoreSearchService = keystoreSearchService;
+            _applicationContext = applicationContext;
             _allCertificates = new ObservableCollection<CertificateModel>();
             _allCertificates.CollectionChanged += (s, e) => OnPropertyChanged(nameof(AllCertificates));
         }
@@ -173,7 +175,7 @@ namespace CertBox.Services
                 _logger.LogDebug("Importing certificate with alias: {Alias}", alias);
 
                 // Save the certificate to a temporary file
-                var tempCertPath = Path.GetTempFileName();
+                var tempCertPath = _applicationContext.GetTempFile();
                 File.WriteAllBytes(tempCertPath, certificate.Export(X509ContentType.Cert));
 
                 // Run keytool -importcert

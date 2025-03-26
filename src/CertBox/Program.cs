@@ -1,4 +1,3 @@
-// src/CertBox/Program.cs
 using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -19,17 +18,20 @@ namespace CertBox
     {
         private static IServiceProvider? _serviceProvider;
         private static ApplicationContext _applicationContext = null!;
+        private static ILogger<Program> _logger = null!;
 
         [STAThread]
         public static void Main(string[] args)
         {
             _applicationContext = new ApplicationContext(AppDomain.CurrentDomain.BaseDirectory, 6);
             ConfigureServices();
-            DebugResources();
-
+            
             var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
-            Log.Information("Starting CertBox version {Version}", version);
-
+            _logger.LogInformation("Starting CertBox version {Version}", version);
+            
+            DebugResources();
+            CreateTempDirectory();
+            
             try
             {
                 BuildAvaloniaApp()
@@ -37,12 +39,27 @@ namespace CertBox
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "Application failed to start.");
+                _logger.LogCritical(ex, "Application failed to start.");
                 throw;
             }
             finally
             {
                 Log.CloseAndFlush();
+            }
+        }
+
+        private static void CreateTempDirectory()
+        {
+            if (!Directory.Exists(_applicationContext.TempPath))
+            {
+                try
+                {
+                    Directory.CreateDirectory(_applicationContext.TempPath);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Unable to create temp directory.");
+                }
             }
         }
 
@@ -53,15 +70,14 @@ namespace CertBox
 
         private static void DebugResources()
         {
-            var logger = _serviceProvider!.GetRequiredService<ILogger<Program>>();
-            logger.LogDebug("Debugging embedded resources...");
+            _logger.LogDebug("Debugging embedded resources...");
 
             var assembly = Assembly.GetExecutingAssembly();
             var resourceNames = assembly.GetManifestResourceNames();
 
             foreach (var resourceName in resourceNames)
             {
-                logger.LogDebug("Found embedded resource: {ResourceName}", resourceName);
+                _logger.LogDebug("Found embedded resource: {ResourceName}", resourceName);
             }
         }
 
@@ -75,14 +91,16 @@ namespace CertBox
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddJsonFile("../Resources/appsettings.json", optional: true, reloadOnChange: true)
                 .Build();
-
+            
             var logPathSection = FindLogPathSection(configuration);
             if (logPathSection != null)
             {
                 var logPath = logPathSection.Value?.ToString();
                 if (logPath != null)
                 {
-                    logPathSection.Value = Path.GetFullPath(Path.Combine(baseDir, logPath));
+                    _applicationContext.ConfiguredLogsDirectoryPath =
+                        logPath.Substring(0, logPath.LastIndexOf(Path.DirectorySeparatorChar));
+                    logPathSection.Value = Path.GetFullPath(Path.Combine(_applicationContext.LogBasePath, logPath));
                 }
             }
 
@@ -180,7 +198,8 @@ namespace CertBox
             services.AddTransient<StatusBarView>();
             services.AddSingleton<CertificateService>(provider => new CertificateService(
                 provider.GetRequiredService<ILogger<CertificateService>>(),
-                provider.GetRequiredService<IKeystoreSearchService>()
+                provider.GetRequiredService<IKeystoreSearchService>(),
+                _applicationContext
             ));
             services.AddSingleton<IThemeManager>(provider => new ThemeManager(
                 Application.Current!,
@@ -198,8 +217,8 @@ namespace CertBox
 
             _serviceProvider = services.BuildServiceProvider();
 
-            var logger = _serviceProvider.GetRequiredService<ILogger<Program>>();
-            logger.LogDebug("Application starting...");
+            _logger = _serviceProvider!.GetRequiredService<ILogger<Program>>();
+            _logger.LogDebug("Application starting...");
         }
 
         public static IServiceProvider ServiceProvider => _serviceProvider!

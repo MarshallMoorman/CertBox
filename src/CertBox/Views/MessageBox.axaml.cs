@@ -46,7 +46,7 @@ namespace CertBox.Views
             // Size to content within MaxWidth/MaxHeight constraints
             messageBox.SizeToContent = SizeToContent.WidthAndHeight;
 
-            await messageBox.ShowDialog(owner);
+            await messageBox.ShowDialog(owner!);
             return messageBox.Result;
         }
 

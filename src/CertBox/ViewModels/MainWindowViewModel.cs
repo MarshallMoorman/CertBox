@@ -184,13 +184,18 @@ namespace CertBox.ViewModels
         {
             if (e.PropertyName == nameof(SearchQuery))
             {
-                Certificates = _filterService.FilterCertificates(SearchQuery);
+                FilterCertificates();
             }
             else if (e.PropertyName == nameof(SelectedFilePath))
             {
                 _userConfigService.Config.LastKeystorePath = SelectedFilePath;
                 _userConfigService.SaveConfig();
             }
+        }
+
+        private void FilterCertificates()
+        {
+            Certificates = _filterService.FilterCertificates(SearchQuery);
         }
 
         [RelayCommand]
@@ -317,6 +322,10 @@ namespace CertBox.ViewModels
                         _certificateService.ImportCertificate(alias, cert);
                         await _certificateService.LoadCertificatesAsync(SelectedFilePath);
                         _logger.LogInformation("Imported certificate with alias: {Alias}", alias);
+                        if (!string.IsNullOrEmpty(SearchQuery))
+                        {
+                            FilterCertificates();
+                        }
                     }
                 }
             }
