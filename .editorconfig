@@ -22,7 +22,7 @@ dotnet_naming_rule.unity_serialized_field_rule.style = lower_camel_case_style
 dotnet_naming_rule.unity_serialized_field_rule.symbols = unity_serialized_field_symbols
 dotnet_naming_style.lower_camel_case_style.capitalization = camel_case
 dotnet_naming_symbols.unity_serialized_field_symbols.applicable_accessibilities = *
-dotnet_naming_symbols.unity_serialized_field_symbols.applicable_kinds = 
+dotnet_naming_symbols.unity_serialized_field_symbols.applicable_kinds =
 dotnet_naming_symbols.unity_serialized_field_symbols.resharper_applicable_kinds = unity_serialised_field
 dotnet_naming_symbols.unity_serialized_field_symbols.resharper_required_modifiers = instance
 dotnet_style_parentheses_in_arithmetic_binary_operators = never_if_unnecessary:none
@@ -68,24 +68,50 @@ resharper_web_config_module_not_resolved_highlighting = warning
 resharper_web_config_type_not_resolved_highlighting = warning
 resharper_web_config_wrong_module_highlighting = warning
 
+# Microsoft .NET properties
+csharp_prefer_braces = true:none
+
+# ReSharper properties
+resharper_braces_redundant = true
+
 # C# files - Enhanced formatting rules
 [*.cs]
+root = true
 indent_style = space
 indent_size = 4
 tab_width = 4
-**csharp_new_line_before_open_brace = all**  # Braces on new lines (Microsoft style)
-**csharp_new_line_before_else = true**      # 'else' on new line
-**csharp_new_line_before_catch = true**     # 'catch' on new line
-**csharp_new_line_before_finally = true**   # 'finally' on new line
-**csharp_space_after_keywords_in_control_flow_statements = true**  # Space after 'if', 'for', etc.
-**csharp_space_between_method_call_parentheses = false**  # No space in method calls: Foo()
-**csharp_space_between_method_declaration_parentheses = false**  # No space in method defs: void Foo()
-**csharp_preserve_single_line_statements = false**  # Single-line statements get braces
-**csharp_preserve_single_line_blocks = true**  # Allow single-line blocks without reformatting
-**csharp_indent_case_contents = true**      # Indent switch case contents
-**csharp_indent_labels = one_less_than_current**  # Labels one indent less than surrounding code
-**csharp_wrap_lines = true**                # Wrap long lines
-**csharp_max_line_length = 120**            # Max line length (adjustable)
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_between_method_call_parentheses = false
+csharp_space_between_method_declaration_parentheses = false
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = true
+csharp_indent_case_contents = true
+csharp_indent_labels = one_less_than_current
+csharp_wrap_lines = true
+csharp_max_line_length = 120
+csharp_style_conditional_to_statement_block = true:suggestion
+resharper_force_braces_in_if_else = true
+csharp_style_prefer_braces = true:warning
+csharp_preserve_single_line_attribute_list = false
+resharper_place_attribute_on_same_line = false
+resharper_csharp_place_attribute_on_same_line = false
+resharper_csharp_place_type_attribute_on_same_line = false
+resharper_csharp_place_method_attribute_on_same_line = false
+resharper_csharp_place_accessor_attribute_on_same_line = false
+resharper_csharp_keep_existing_attribute_arrangement = false
+resharper_csharp_max_attribute_length_for_same_line = 1
+resharper_csharp_if_else_braces = required
+resharper_csharp_keep_existing_if_else_braces_arrangement = false
+resharper_csharp_anonymous_method_declaration_braces = required
+resharper_csharp_expression_statement_braces = required
+resharper_csharp_keep_single_line_lambda_body = false
+resharper_csharp_lambda_body_braces = required
+**resharper_csharp_allow_single_line_if_else = false** # Explicitly disallow single-line if/else
+**resharper_csharp_keep_single_line_statements = false** # Prevent single-line statements
 
 # Other file types (unchanged)
 [{*.bash,*.sh,*.zsh}]
