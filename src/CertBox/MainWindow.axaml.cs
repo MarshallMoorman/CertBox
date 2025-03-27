@@ -4,7 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using CertBox.Common;
-using CertBox.Models;
+using CertBox.Common.Services;
 using CertBox.Services;
 using CertBox.ViewModels;
 using CertBox.Views;
@@ -15,15 +15,15 @@ namespace CertBox
     public partial class MainWindow : Window
     {
         private readonly IApplicationContext _applicationContext;
-        private readonly ILogger<MainWindowViewModel> _logger;
-        private readonly UserConfigService _userConfigService;
         private readonly CertificateService _certificateService;
-        private readonly KeystoreView _keystoreView;
-        private readonly HeaderView _headerView;
-        private readonly ErrorPaneView _errorPaneView;
         private readonly CertificateView _certificateView;
         private readonly DetailsPaneView _detailsPaneView;
+        private readonly ErrorPaneView _errorPaneView;
+        private readonly HeaderView _headerView;
+        private readonly KeystoreView _keystoreView;
+        private readonly ILogger<MainWindowViewModel> _logger;
         private readonly StatusBarView _statusBarView;
+        private readonly UserConfigService _userConfigService;
         private Grid? _certificateGrid;
 
         // Parameterless constructor for Avalonia's runtime loader
@@ -33,8 +33,10 @@ namespace CertBox
         }
 
         public MainWindow(MainWindowViewModel viewModel, IApplicationContext applicationContext,
-            ILogger<MainWindowViewModel> logger, UserConfigService userConfigService, CertificateService certificateService,
-            KeystoreView keystoreView, HeaderView headerView, ErrorPaneView errorPaneView, CertificateView certificateView,
+            ILogger<MainWindowViewModel> logger, UserConfigService userConfigService,
+            CertificateService certificateService,
+            KeystoreView keystoreView, HeaderView headerView, ErrorPaneView errorPaneView,
+            CertificateView certificateView,
             DetailsPaneView detailsPaneView, StatusBarView statusBarView)
         {
             _applicationContext = applicationContext;
@@ -93,13 +95,13 @@ namespace CertBox
             {
                 return await MessageBox.Show(this, title, message, buttons);
             };
-            
+
             viewModel.OpenLogsDirectoryRequested += () =>
             {
                 try
                 {
                     // Logs directory is at "logs/" relative to the app's base directory
-                    string logsPath = _applicationContext.LogPath;
+                    var logsPath = _applicationContext.LogPath;
                     if (!Directory.Exists(logsPath))
                     {
                         _logger.LogWarning("Logs directory does not exist: {Path}", logsPath);
@@ -175,18 +177,19 @@ namespace CertBox
                     var certificateView =
                         this.FindControl<ContentControl>("CertificateViewPlaceholder")?.Content as CertificateView;
                     var certificateList = certificateView?.FindControl<DataGrid>("CertificateList");
-                    bool isWithinDataGrid =
+                    var isWithinDataGrid =
                         source != null && certificateList != null && IsDescendantOf(source, certificateList);
 
                     // Find the Remove button within CertificateView
                     var removeButton = certificateView?.FindControl<Button>("RemoveButton");
-                    bool isRemoveButton = source is Button button && button == removeButton;
+                    var isRemoveButton = source is Button button && button == removeButton;
 
                     // Find the DetailsPaneView and its DetailsPane Border
                     var detailsPaneView =
                         this.FindControl<ContentControl>("DetailsPaneViewPlaceholder")?.Content as DetailsPaneView;
                     var detailsPane = detailsPaneView?.FindControl<Border>("DetailsPane");
-                    bool isWithinDetailsPane = source != null && detailsPane != null && IsDescendantOf(source, detailsPane);
+                    var isWithinDetailsPane =
+                        source != null && detailsPane != null && IsDescendantOf(source, detailsPane);
 
                     // Clear selection if the click is outside the DataGrid, DetailsPane, and not on the Remove button
                     if (!isWithinDataGrid && !isWithinDetailsPane && !isRemoveButton)

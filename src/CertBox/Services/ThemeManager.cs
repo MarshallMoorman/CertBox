@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Styling;
+using CertBox.Common.Services;
 
 namespace CertBox.Services
 {

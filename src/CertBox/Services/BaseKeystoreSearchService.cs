@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using CertBox.Common;
+using CertBox.Common.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -8,14 +9,13 @@ namespace CertBox.Services
 {
     public abstract class BaseKeystoreSearchService : IKeystoreSearchService
     {
-        protected readonly IKeystoreFinder _finder;
-        protected readonly ILogger _logger;
+        protected readonly IApplicationContext _applicationContext;
         protected readonly string _cachePath;
         protected readonly IConfiguration _configuration;
-        protected readonly IApplicationContext _applicationContext;
+        protected readonly IKeystoreFinder _finder;
+        protected readonly ILogger _logger;
         protected readonly UserConfigService _userConfigService;
         protected CancellationTokenSource _cancellationTokenSource;
-        public ObservableCollection<string> KeystoreFiles { get; } = new();
 
         protected BaseKeystoreSearchService(IKeystoreFinder finder, ILogger logger, IConfiguration configuration,
             IApplicationContext applicationContext, UserConfigService userConfigService)
@@ -38,6 +38,8 @@ namespace CertBox.Services
                 _logger.LogWarning("Could not determine directory for cache path: {CachePath}", _cachePath);
             }
         }
+
+        public ObservableCollection<string> KeystoreFiles { get; } = new();
 
         public void AddKeystorePath(string path)
         {
@@ -95,7 +97,8 @@ namespace CertBox.Services
                 var cached = JsonSerializer.Deserialize<List<string>>(json);
                 if (cached == null)
                 {
-                    _logger.LogWarning("Failed to deserialize keystore cache from {CachePath}; initializing empty list.",
+                    _logger.LogWarning(
+                        "Failed to deserialize keystore cache from {CachePath}; initializing empty list.",
                         _cachePath);
                     cached = new List<string>();
                 }

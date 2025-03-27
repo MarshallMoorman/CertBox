@@ -1,9 +1,9 @@
-using System;
 using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using CertBox.Common;
+using CertBox.Common.Services;
 using CertBox.Models;
 using CertBox.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,52 +14,27 @@ namespace CertBox.ViewModels
 {
     public partial class MainWindowViewModel : ObservableObject
     {
+        private readonly IApplicationContext _applicationContext;
+        public readonly CertificateService _certificateService;
+        private readonly DeepSearchService _deepSearchService;
+        private readonly CertificateFilterService _filterService;
         private readonly ILogger<MainWindowViewModel> _logger;
         private readonly IKeystoreSearchService _searchService;
-        public readonly CertificateService _certificateService;
-        private readonly IApplicationContext _applicationContext;
         private readonly IThemeManager _themeManager;
         private readonly UserConfigService _userConfigService;
-        private readonly CertificateFilterService _filterService;
-        private readonly DeepSearchService _deepSearchService;
         private readonly ViewState _viewState;
 
-        [NotifyCanExecuteChangedFor(nameof(ClearSearchCommand))]
-        [ObservableProperty]
+        [ObservableProperty] private ObservableCollection<CertificateModel> _certificates;
+
+        [NotifyCanExecuteChangedFor(nameof(ClearSearchCommand))] [ObservableProperty]
         private string _searchQuery = string.Empty;
 
-        [ObservableProperty]
-        private ObservableCollection<CertificateModel> _certificates;
-
-        public ObservableCollection<string> KeystoreFiles => _searchService.KeystoreFiles;
-
-        [ObservableProperty]
-        private string _selectedFilePath = string.Empty;
-
-        [ObservableProperty]
-        private string _version;
-
-        [NotifyCanExecuteChangedFor(nameof(RemoveCommand))]
-        [ObservableProperty]
+        [NotifyCanExecuteChangedFor(nameof(RemoveCommand))] [ObservableProperty]
         private CertificateModel? _selectedCertificate;
 
-        public string ErrorMessage
-        {
-            get => _viewState.ErrorMessage;
-            set => _viewState.ErrorMessage = value;
-        }
+        [ObservableProperty] private string _selectedFilePath = string.Empty;
 
-        public bool IsErrorPaneVisible
-        {
-            get => _viewState.IsErrorPaneVisible;
-            set => _viewState.IsErrorPaneVisible = value;
-        }
-
-        public bool IsDeepSearchRunning
-        {
-            get => _viewState.IsDeepSearchRunning;
-            set => _viewState.IsDeepSearchRunning = value;
-        }
+        [ObservableProperty] private string _version;
 
         private string? DefaultKeystorePath;
 
@@ -143,6 +118,26 @@ namespace CertBox.ViewModels
             _searchService.StartSearch();
 
             PropertyChanged += OnPropertyChanged;
+        }
+
+        public ObservableCollection<string> KeystoreFiles => _searchService.KeystoreFiles;
+
+        public string ErrorMessage
+        {
+            get => _viewState.ErrorMessage;
+            set => _viewState.ErrorMessage = value;
+        }
+
+        public bool IsErrorPaneVisible
+        {
+            get => _viewState.IsErrorPaneVisible;
+            set => _viewState.IsErrorPaneVisible = value;
+        }
+
+        public bool IsDeepSearchRunning
+        {
+            get => _viewState.IsDeepSearchRunning;
+            set => _viewState.IsDeepSearchRunning = value;
         }
 
         private void SetDefaultKeystorePath()
@@ -237,6 +232,7 @@ namespace CertBox.ViewModels
             {
                 await CheckFileSystemAccess();
             }
+
             await _deepSearchService.StartDeepSearch();
         }
 
@@ -245,7 +241,7 @@ namespace CertBox.ViewModels
             try
             {
                 // Attempt to access a protected location to trigger a macOS permission prompt
-                string desktopPath = "/Library";
+                var desktopPath = "/Library";
                 if (Directory.Exists(desktopPath))
                 {
                     // Try reading a file or directory to trigger the prompt
@@ -300,8 +296,8 @@ namespace CertBox.ViewModels
                 ShowError("No keystore loaded for import.");
                 return;
             }
-            
-            string certPath = string.Empty;
+
+            var certPath = string.Empty;
 
             try
             {
@@ -317,7 +313,7 @@ namespace CertBox.ViewModels
                             return;
                         }
 
-                        var cert = X509CertificateLoader.LoadCertificate(File. ReadAllBytes(certPath));
+                        var cert = X509CertificateLoader.LoadCertificate(File.ReadAllBytes(certPath));
                         var alias = Path.GetFileNameWithoutExtension(certPath);
                         _certificateService.ImportCertificate(alias, cert);
                         await _certificateService.LoadCertificatesAsync(SelectedFilePath);
@@ -331,7 +327,8 @@ namespace CertBox.ViewModels
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogWarning(ex, "File system access denied during Import. Prompting user for Full Disk Access and App Management.");
+                _logger.LogWarning(ex,
+                    "File system access denied during Import. Prompting user for Full Disk Access and App Management.");
                 if (ShowMessageBoxRequested != null && RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
                     await ShowMessageBoxRequested.Invoke(
@@ -407,7 +404,8 @@ namespace CertBox.ViewModels
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogWarning(ex, "File system access denied during Import. Prompting user for Full Disk Access and App Management.");
+                _logger.LogWarning(ex,
+                    "File system access denied during Import. Prompting user for Full Disk Access and App Management.");
                 if (ShowMessageBoxRequested != null && RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
                     await ShowMessageBoxRequested.Invoke(
@@ -464,7 +462,7 @@ namespace CertBox.ViewModels
                         _logger.LogInformation("JDK path configured successfully: {Path}", result);
 
                         // Look for a keystore file in the JDK's lib/security directory
-                        string keystorePath = Path.Combine(result, "lib", "security", "cacerts");
+                        var keystorePath = Path.Combine(result, "lib", "security", "cacerts");
                         if (File.Exists(keystorePath))
                         {
                             _logger.LogInformation("Found keystore in JDK: {KeystorePath}", keystorePath);

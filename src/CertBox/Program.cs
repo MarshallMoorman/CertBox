@@ -1,8 +1,8 @@
-using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Avalonia;
 using CertBox.Common;
+using CertBox.Common.Services;
 using CertBox.Services;
 using CertBox.ViewModels;
 using CertBox.Views;
@@ -20,18 +20,22 @@ namespace CertBox
         private static ApplicationContext _applicationContext = null!;
         private static ILogger<Program> _logger = null!;
 
+        public static IServiceProvider ServiceProvider => _serviceProvider!
+                                                          ?? throw new InvalidOperationException(
+                                                              "Service provider not initialized.");
+
         [STAThread]
         public static void Main(string[] args)
         {
             _applicationContext = new ApplicationContext(AppDomain.CurrentDomain.BaseDirectory, 6);
             ConfigureServices();
-            
+
             var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
             _logger.LogInformation("Starting CertBox version {Version}", version);
-            
+
             DebugResources();
             CreateTempDirectory();
-            
+
             try
             {
                 BuildAvaloniaApp()
@@ -91,7 +95,7 @@ namespace CertBox
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddJsonFile("../Resources/appsettings.json", optional: true, reloadOnChange: true)
                 .Build();
-            
+
             var logPathSection = FindLogPathSection(configuration);
             if (logPathSection != null)
             {
@@ -220,10 +224,6 @@ namespace CertBox
             _logger = _serviceProvider!.GetRequiredService<ILogger<Program>>();
             _logger.LogDebug("Application starting...");
         }
-
-        public static IServiceProvider ServiceProvider => _serviceProvider!
-                                                          ?? throw new InvalidOperationException(
-                                                              "Service provider not initialized.");
 
         private static IConfigurationSection? FindLogPathSection(IConfigurationRoot configuration)
         {

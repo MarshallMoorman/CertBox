@@ -1,4 +1,4 @@
-namespace CertBox.Models
+namespace CertBox.Common.Models
 {
     public class UserConfig
     {

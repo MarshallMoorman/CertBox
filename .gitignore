@@ -404,3 +404,4 @@ tests/resources/*.*
 tests/resources/sample_certs/*.*
 tests/resources/test_cacerts
 local_sign_and_notorize.sh
+test_keystore

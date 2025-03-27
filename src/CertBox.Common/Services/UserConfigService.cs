@@ -1,11 +1,10 @@
 using System.Text.Json;
-using CertBox.Common;
-using CertBox.Models;
+using CertBox.Common.Models;
 using Microsoft.Extensions.Logging;
 
-namespace CertBox.Services
+namespace CertBox.Common.Services
 {
-    public class UserConfigService
+    public class UserConfigService : IUserConfigService
     {
         private readonly string _configPath;
         private readonly ILogger<UserConfigService> _logger;
@@ -49,6 +48,26 @@ namespace CertBox.Services
 
         public UserConfig Config => _config;
 
+        public void SaveConfig()
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(_config, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(_configPath, json);
+                _logger.LogDebug("Saved user config to {ConfigPath}", _configPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to save user config to {ConfigPath}", _configPath);
+            }
+        }
+
+        public void UpdateJdkPath(string jdkPath)
+        {
+            Config.JdkPath = NormalizePath(jdkPath);
+            SaveConfig();
+        }
+
         private void LoadConfig()
         {
             try
@@ -78,26 +97,6 @@ namespace CertBox.Services
             }
         }
 
-        public void SaveConfig()
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(_config, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_configPath, json);
-                _logger.LogDebug("Saved user config to {ConfigPath}", _configPath);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to save user config to {ConfigPath}", _configPath);
-            }
-        }
-
-        public void UpdateJdkPath(string jdkPath)
-        {
-            Config.JdkPath = NormalizePath(jdkPath);
-            SaveConfig();
-        }
-
         private string NormalizePath(string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -107,7 +106,7 @@ namespace CertBox.Services
             path = Path.GetFullPath(path);
 
             // Use the platform-specific directory separator
-            char separator = Path.DirectorySeparatorChar; // '\' on Windows, '/' on Unix-like systems
+            var separator = Path.DirectorySeparatorChar; // '\' on Windows, '/' on Unix-like systems
             path = path.Replace('/', separator).Replace('\\', separator);
 
             return path;
